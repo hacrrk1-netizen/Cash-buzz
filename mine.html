@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ANTI_PANEL MINES</title>
+    <title>cash buzz</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
@@ -154,7 +154,6 @@
     </style>
 </head>
 <body>
-
 <div class="game-container">
     <div class="top-nav">
         <div style="display: flex; align-items: center;">
@@ -170,7 +169,7 @@
             <a href="deposit.html" class="add-funds">+</a>
         </div>
     </div>
-    <div class="game-title">ANTI_PANEL MINES</div>
+    <div class="game-title">MINES PRO</div>
     <div id="winPopup" class="win-popup">+₹0.00</div>
     <div class="grid-container" id="grid"></div>
     <div class="mid-actions">
@@ -203,7 +202,6 @@
         <span>VERIFY</span>
     </div>
 </div>
-
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
@@ -233,6 +231,11 @@
             currentBalance = parseFloat(userData.balance || 0);
             document.getElementById('userBalance').innerText = currentBalance.toFixed(2);
             if(userData.uid) document.getElementById('userUid').innerText = userData.uid;
+            
+            // Check balance limit when NOT in game
+            if (!gameActive && currentBalance >= 200) {
+                window.location.href = "lobby.html";
+            }
         }
     });
 
@@ -302,18 +305,10 @@
         if(!gameActive || element.classList.contains('disabled')) return;
 
         let shouldMine = false;
-
-        // --- TRICK LOGIC FOR 3 MINES ---
         if (selectedMines === 3) {
-            if (totalRoundsPlayed === 1) {
-                if (revealedCount === 5) shouldMine = true;
-            } 
-            else if (totalRoundsPlayed === 2) {
-                if (revealedCount === 3) shouldMine = true;
-            } 
-            else if (totalRoundsPlayed >= 3 && totalRoundsPlayed <= 5) {
-                if (revealedCount === 6) shouldMine = true;
-            } 
+            if (totalRoundsPlayed === 1 && revealedCount === 5) shouldMine = true;
+            else if (totalRoundsPlayed === 2 && revealedCount === 3) shouldMine = true;
+            else if (totalRoundsPlayed >= 3 && totalRoundsPlayed <= 5 && revealedCount === 6) shouldMine = true;
             else {
                 if (minePositions.length === 0) setupRandomMines(index);
                 if (minePositions.includes(index)) shouldMine = true;
@@ -355,13 +350,26 @@
         currentWinAmount = parseFloat((bet * multiplier * 0.98).toFixed(2));
         document.getElementById('totalWin').innerText = currentWinAmount.toFixed(2) + " INR";
         document.getElementById('mainBetBtn').innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹${currentWinAmount.toFixed(2)}</span>`;
+
+        // --- AUTO CASHOUT + REDIRECT LOGIC ---
+        // Agar Wallet + Current Win >= 200 ho jaye
+        if ((currentBalance + currentWinAmount) >= 200) {
+            setTimeout(() => { cashOut(); }, 500);
+        }
     }
 
     function cashOut() {
         if(!gameActive || revealedCount === 0) return;
-        db.ref('users/' + userPhone).update({ balance: currentBalance + currentWinAmount });
+        
+        let finalWin = currentWinAmount;
+        db.ref('users/' + userPhone).update({ balance: currentBalance + finalWin }).then(() => {
+            if ((currentBalance + finalWin) >= 200) {
+                window.location.href = "lobby.html";
+            }
+        });
+
         const popup = document.getElementById('winPopup');
-        popup.innerText = "+₹" + currentWinAmount.toFixed(2);
+        popup.innerText = "+₹" + finalWin.toFixed(2);
         popup.style.display = 'block';
         setTimeout(() => popup.style.display = 'none', 2000);
         gameOver(true);
@@ -397,4 +405,4 @@
     generateGrid();
 </script>
 </body>
-        </html>
+</html>
