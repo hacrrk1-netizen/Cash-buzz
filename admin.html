@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        /* Panel ko shuru mein chhupa ke rakhne ke liye */
+        #adminContent {
+            display: none;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a, #0f172a);
+            color: white;
+            min-height: 100vh;
+        }
+        /* HEADER with Back Button */
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn-top {
+            position: absolute;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: normal;
+            transition: 0.2s;
+        }
+
+        .back-btn-top:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* CONTAINER */
+        .container {
+            max-width: 400px;
+            margin: auto;
+            padding: 15px;
+        }
+        /* BUTTON GRID */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        /* BUTTON */
+        .btn {
+            padding: 20px 10px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            background: white;
+            color: #1e3a8a;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .btn:active {
+            transform: scale(0.95);
+            background: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+
+<div id="adminContent">
+    <div class="header">
+        <a href="index.html" class="back-btn-top">⬅ Back</a>
+        Admin Panel ⚙️
+    </div>
+
+    <div class="container">
+        <div class="grid">
+            <button class="btn" onclick="window.location.href='register.html'">REGISTER IDS</button>
+            <button class="btn" onclick="window.location.href='wr.html'">WITHDRAWAL REQ</button>
+            <button class="btn" onclick="window.location.href='dr.html'">DEPOSIT REQ</button>
+            <button class="btn" onclick="window.location.href='b.html'">BALANCE UPDATE</button>
+            <button class="btn" onclick="window.location.href='c.html'">CUSTOMER SERVICE</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Admin Key Logic
+    function checkKey() {
+        const correctKey = "alok1234";
+        const userKey = prompt("Enter Admin Passkey:");
+
+        if (userKey === correctKey) {
+            document.getElementById("adminContent").style.display = "block";
+        } else {
+            alert("Wrong Key! Access Denied.");
+            window.location.href = "index.html"; // Galat key pe wapas bhej dega
+        }
+    }
+
+    // Page load hote hi key maangega
+    window.onload = checkKey;
+</script>
+
+</body>
+</html>

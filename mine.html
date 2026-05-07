@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ANTI_PANEL MINES</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary-blue: #3b82f6;
+            --dark-navy: #0f172a;
+            --glass: rgba(255, 255, 255, 0.1);
+            --border-glow: #60a5fa;
+            --star-gold: #fbbf24;
+            --mine-red: #ef4444;
+            --success-green: #22c55e;
+        }
+        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--dark-navy);
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            color: white;
+            overflow: hidden;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            background: radial-gradient(circle at top, #1e40af 0%, #0f172a 100%);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            height: 100%;
+        }
+        .top-nav {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+        .back-btn {
+            font-size: 24px;
+            text-decoration: none;
+            color: white;
+            background: var(--glass);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            margin-right: 10px;
+        }
+        .user-info { display: flex; flex-direction: column; }
+        .uid-label { font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .uid-value { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+        .balance-chip {
+            background: #1e293b;
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-glow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .add-funds {
+            background: var(--primary-blue);
+            border-radius: 6px;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            text-decoration: none;
+            color: white;
+        }
+        .game-title { text-align: center; font-weight: 800; padding: 10px; font-size: 18px; letter-spacing: 6px; color: #60a5fa; }
+        .grid-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 15px;
+            align-content: flex-start;
+        }
+        .grid-item {
+            aspect-ratio: 1;
+            background: linear-gradient(145deg, #1e3a8a, #172554);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 24px;
+        }
+        .grid-item:active { transform: scale(0.92); }
+        .grid-item.revealed-star { 
+            background: var(--star-gold); 
+            box-shadow: 0 0 15px var(--star-gold);
+            border: none;
+            animation: flipIn 0.3s ease-out;
+        }
+        .grid-item.revealed-mine { 
+            background: var(--mine-red); 
+            box-shadow: 0 0 15px var(--mine-red);
+            animation: shake 0.4s both;
+        }
+        @keyframes flipIn { from { transform: rotateY(90deg); opacity: 0; } to { transform: rotateY(0); opacity: 1; } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        .grid-item.disabled { pointer-events: none; }
+        .dot { width: 6px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 50%; }
+        .mid-actions { display: flex; justify-content: space-between; padding: 0 20px 15px; gap: 15px; }
+        .btn-secondary { flex: 1; background: rgba(30, 41, 59, 0.5); color: white; border: 1px solid #334155; border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .betting-panel { background: #111827; padding: 20px 20px 30px; border-radius: 30px 30px 0 0; border-top: 1px solid rgba(96, 165, 250, 0.3); }
+        .bet-input-box { background: #0f172a; border: 1px solid #334155; border-radius: 16px; display: flex; align-items: center; padding: 8px; margin-bottom: 15px; }
+        .btn-step { background: #1e293b; border: none; color: white; width: 45px; height: 45px; border-radius: 12px; font-size: 20px; cursor: pointer; }
+        .bet-display { flex: 1; text-align: center; }
+        .bet-display input { background: transparent; border: none; color: white; font-weight: 700; font-size: 22px; width: 100%; text-align: center; outline: none; }
+        .bet-btn {
+            width: 100%;
+            background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-weight: 800;
+            font-size: 18px;
+            height: 65px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-sub-text { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+        .bet-btn.cashout { background: linear-gradient(180deg, #eab308 0%, #a16207 100%); box-shadow: 0 4px 15px rgba(161, 98, 7, 0.4); }
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 100; justify-content: flex-end; flex-direction: column; }
+        .modal-content { background: #1e293b; border-radius: 25px 25px 0 0; padding: 25px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .mine-opt { padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: center; cursor: pointer; font-weight: 700; border: 1px solid transparent; }
+        .mine-opt.active { border-color: var(--primary-blue); background: rgba(59, 130, 246, 0.2); }
+        .win-popup { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: var(--success-green); color: white; padding: 15px 30px; border-radius: 50px; font-weight: 900; font-size: 20px; display: none; z-index: 50; }
+        .footer { padding: 15px 25px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; background: #0b0f1a; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="top-nav">
+        <div style="display: flex; align-items: center;">
+            <a href="lobby.html" class="back-btn">‹</a>
+            <div class="user-info">
+                <span class="uid-label">PLAYER ID</span>
+                <span class="uid-value" id="userUid">Loading...</span>
+            </div>
+        </div>
+        <div class="balance-chip">
+            <span style="color: #fbbf24; font-weight: bold;">₹</span> 
+            <span id="userBalance">0.00</span>
+            <a href="deposit.html" class="add-funds">+</a>
+        </div>
+    </div>
+    <div class="game-title">ANTI_PANEL MINES</div>
+    <div id="winPopup" class="win-popup">+₹0.00</div>
+    <div class="grid-container" id="grid"></div>
+    <div class="mid-actions">
+        <button class="btn-secondary" onclick="resetGame()">CLEAR BOARD</button>
+        <button class="btn-secondary" id="mineSelectTrigger" onclick="toggleModal()">3 MINES</button>
+    </div>
+    <div class="betting-panel">
+        <div class="bet-input-box">
+            <button class="btn-step" onclick="adjustBet(-10)">−</button>
+            <div class="bet-display"><input type="number" value="10" id="betAmount" readonly></div>
+            <button class="btn-step" onclick="adjustBet(10)">+</button>
+        </div>
+        <button class="bet-btn" id="mainBetBtn" onclick="handleBetClick()">
+            <span>PLACE BET</span>
+        </button>
+    </div>
+    <div class="modal-overlay" id="mineModal" onclick="toggleModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="mine-opt" onclick="setMines(1)">1</div>
+            <div class="mine-opt active" onclick="setMines(3)">3</div>
+            <div class="mine-opt" onclick="setMines(5)">5</div>
+            <div class="mine-opt" onclick="setMines(10)">10</div>
+            <div class="mine-opt" onclick="setMines(20)">20</div>
+            <div class="mine-opt" onclick="setMines(24)">24</div>
+        </div>
+    </div>
+    <div class="footer">
+        <span>PROVABLY FAIR</span>
+        <span id="totalWin" style="color: #4ade80; font-weight: 700;">0.00 INR</span>
+        <span>VERIFY</span>
+    </div>
+</div>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        projectId: "admin222-a87bb",
+        appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const userPhone = localStorage.getItem('user_phone');
+    
+    let currentBalance = 0;
+    let selectedMines = 3;
+    let gameActive = false;
+    let minePositions = [];
+    let revealedCount = 0;
+    let currentWinAmount = 0;
+
+    if (!userPhone) window.location.href = "index.html";
+
+    db.ref('users/' + userPhone).on('value', (snapshot) => {
+        const userData = snapshot.val();
+        if (userData) {
+            currentBalance = parseFloat(userData.balance || 0);
+            document.getElementById('userBalance').innerText = currentBalance.toFixed(2);
+            if(userData.uid) document.getElementById('userUid').innerText = userData.uid;
+            if (currentBalance >= 200 && !gameActive) {
+                window.location.href = "lobby.html";
+            }
+        }
+    });
+
+    function toggleModal() {
+        if(gameActive) return;
+        const modal = document.getElementById('mineModal');
+        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function setMines(count) {
+        selectedMines = count;
+        document.querySelectorAll('.mine-opt').forEach(opt => {
+            opt.classList.remove('active');
+            if(parseInt(opt.innerText) === count) opt.classList.add('active');
+        });
+        document.getElementById('mineSelectTrigger').innerText = count + " MINES";
+        toggleModal();
+        resetGame();
+    }
+
+    function adjustBet(amount) {
+        if(gameActive) return;
+        const input = document.getElementById('betAmount');
+        let newVal = parseInt(input.value) + amount;
+        if(newVal < 10) newVal = 10;
+        if(newVal > currentBalance) newVal = Math.floor(currentBalance / 10) * 10;
+        input.value = newVal || 10;
+    }
+
+    function generateGrid() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        for(let i=0; i<25; i++) {
+            const item = document.createElement('div');
+            item.className = 'grid-item';
+            item.innerHTML = '<div class="dot"></div>';
+            item.onclick = () => revealBox(i, item);
+            grid.appendChild(item);
+        }
+    }
+
+    function handleBetClick() {
+        if (!gameActive) startGame(); else cashOut();
+    }
+
+    function startGame() {
+        const betAmount = parseInt(document.getElementById('betAmount').value);
+        if(currentBalance < betAmount) return alert("Low Balance!");
+        
+        db.ref('users/' + userPhone).update({ balance: currentBalance - betAmount });
+        
+        gameActive = true;
+        revealedCount = 0;
+        currentWinAmount = 0;
+        const btn = document.getElementById('mainBetBtn');
+        btn.innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹0.00</span>`;
+        btn.classList.add('cashout');
+        document.getElementById('totalWin').innerText = "0.00 INR";
+        
+        minePositions = [];
+        
+        // --- 70% PROBABILITY LOGIC ---
+        let isLucky = Math.random() < 0.70;
+        let safeZones = [];
+        if(isLucky) {
+            while(safeZones.length < 5) {
+                let s = Math.floor(Math.random() * 25);
+                if(!safeZones.includes(s)) safeZones.push(s);
+            }
+        }
+
+        while(minePositions.length < selectedMines) {
+            let r = Math.floor(Math.random() * 25);
+            if(isLucky && safeZones.includes(r)) continue;
+            if(!minePositions.includes(r)) minePositions.push(r);
+        }
+        
+        generateGrid();
+    }
+
+    function revealBox(index, element) {
+        if(!gameActive || element.classList.contains('disabled')) return;
+        if(minePositions.includes(index)) {
+            element.classList.add('revealed-mine');
+            element.innerHTML = '💣';
+            gameOver(false);
+        } else {
+            element.classList.add('revealed-star');
+            element.innerHTML = '⭐';
+            element.classList.add('disabled');
+            revealedCount++;
+            updateWinDisplay();
+        }
+    }
+
+    function updateWinDisplay() {
+        const bet = parseInt(document.getElementById('betAmount').value);
+        let multiplier = 1;
+        for(let i=0; i<revealedCount; i++) {
+            multiplier *= (25 - i) / (25 - selectedMines - i);
+        }
+        currentWinAmount = parseFloat((bet * multiplier * 0.98).toFixed(2));
+        document.getElementById('totalWin').innerText = currentWinAmount.toFixed(2) + " INR";
+        document.getElementById('mainBetBtn').innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹${currentWinAmount.toFixed(2)}</span>`;
+        if ((currentBalance + currentWinAmount) >= 200) {
+            cashOut(true);
+        }
+    }
+
+    function cashOut(isAuto = false) {
+        if(!gameActive || revealedCount === 0) return;
+        db.ref('users/' + userPhone).update({ balance: currentBalance + currentWinAmount }).then(() => {
+            if (isAuto || (currentBalance + currentWinAmount) >= 200) {
+                window.location.href = "lobby.html";
+            }
+        });
+        const popup = document.getElementById('winPopup');
+        popup.innerText = "+₹" + currentWinAmount.toFixed(2);
+        popup.style.display = 'block';
+        setTimeout(() => popup.style.display = 'none', 2000);
+        gameOver(true);
+    }
+
+    function gameOver(won) {
+        gameActive = false;
+        const btn = document.getElementById('mainBetBtn');
+        btn.innerHTML = `<span>PLACE BET</span>`;
+        btn.classList.remove('cashout');
+        const items = document.querySelectorAll('.grid-item');
+        minePositions.forEach((pos) => {
+            items[pos].innerHTML = '💣';
+            if(!won) items[pos].classList.add('revealed-mine');
+        });
+        items.forEach(item => item.classList.add('disabled'));
+    }
+
+    function resetGame() {
+        if(gameActive) return;
+        document.getElementById('totalWin').innerText = "0.00 INR";
+        generateGrid();
+    }
+    generateGrid();
+</script>
+</body>
+</html>

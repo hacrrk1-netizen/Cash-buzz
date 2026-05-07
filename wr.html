@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Admin - 49club</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; }
+        .header { background: #1e3a8a; padding: 20px; text-align: center; font-size: 20px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .back-btn { display: inline-block; margin-bottom: 15px; color: #60a5fa; text-decoration: none; font-weight: bold; border: 1px solid #60a5fa; padding: 5px 12px; border-radius: 8px; }
+        
+        .req-card { background: white; color: #333; border-radius: 15px; padding: 18px; margin-bottom: 20px; position: relative; border-left: 8px solid #1e3a8a; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .req-card p { margin: 8px 0; font-size: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; display: flex; justify-content: space-between; }
+        .label { font-weight: bold; color: #1e3a8a; }
+        
+        .actions { display: flex; gap: 12px; margin-top: 20px; }
+        .btn-acc { flex: 1; background: #10b981; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-rej { flex: 1; background: #ef4444; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-acc:hover { background: #059669; }
+        .btn-rej:hover { background: #dc2626; }
+        
+        #loading { text-align: center; margin-top: 50px; color: #94a3b8; font-weight: bold; }
+        .no-data { text-align: center; background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; border: 1px dashed #475569; }
+        .status-badge { background: #f59e0b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+    </style>
+</head>
+<body>
+
+<div class="header">WITHDRAWAL CONTROLLER 💸</div>
+
+<div class="container">
+    <a href="admin.html" class="back-btn">← Back to Admin Panel</a>
+    
+    <div id="loading">Checking Firebase for new requests...</div>
+    <div id="requestList"></div>
+</div>
+
+<script>
+    // Firebase Configuration (Same as withdrawal page)
+    const firebaseConfig = {
+        apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        projectId: "admin222-a87bb",
+        appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function fetchWithdrawals() {
+        const list = document.getElementById('requestList');
+        const loader = document.getElementById('loading');
+
+        // Firebase se 'withdrawals' node ko listen karna
+        db.ref('withdrawals').on('value', (snapshot) => {
+            loader.style.display = 'none';
+            list.innerHTML = '';
+            
+            const data = snapshot.val();
+            if (!data) {
+                list.innerHTML = '<div class="no-data">Abhi koi withdrawal request nahi hai. ✅</div>';
+                return;
+            }
+
+            // Object ko array mein convert karke process karna
+            const requests = Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            }));
+
+            // Pending requests ko dikhana (Latest first)
+            let hasPending = false;
+            requests.reverse().forEach(req => {
+                if (req.status === "Pending") {
+                    hasPending = true;
+                    list.innerHTML += `
+                        <div class="req-card" id="card-${req.id}">
+                            <p><span class="label">User UID:</span> <span>${req.uid}</span></p>
+                            <p><span class="label">Phone:</span> <span>${req.phone || 'N/A'}</span></p>
+                            <p><span class="label">Name:</span> <span>${req.name}</span></p>
+                            <p><span class="label">Amount:</span> <span style="color:#059669; font-weight:bold; font-size:16px;">₹${req.amount}</span></p>
+                            <p><span class="label">UPI ID:</span> <span style="color:#2563eb;">${req.upi}</span></p>
+                            <p><span class="label">Request Time:</span> <span style="font-size:11px;">${req.timestamp}</span></p>
+                            <p><span class="label">Current Status:</span> <span class="status-badge">${req.status}</span></p>
+                            
+                            <div class="actions">
+                                <button class="btn-acc" onclick="handleAction('${req.id}', 'Completed')">APPROVE</button>
+                                <button class="btn-rej" onclick="handleAction('${req.id}', 'Rejected')">REJECT</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (!hasPending) {
+                list.innerHTML = '<div class="no-data">Abhi koi pending withdrawal request nahi hai. ✅</div>';
+            }
+        }, (error) => {
+            loader.innerHTML = "<span style='color:#ef4444;'>Firebase Error: Data fetch nahi ho paya.</span>";
+        });
+    }
+
+    async function handleAction(requestId, newStatus) {
+        const confirmMsg = `Kya aap is request ko ${newStatus} karna chahte hain?`;
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            // Firebase mein status update karna
+            await db.ref('withdrawals/' + requestId).update({
+                status: newStatus
+            });
+            
+            alert(`Request ${newStatus} ho gayi hai!`);
+            // Data sync automatic hai isliye fetchWithdrawals call karne ki zaroorat nahi
+        } catch (error) {
+            console.error(error);
+            alert("Error: Status update nahi ho paya.");
+        }
+    }
+
+    // Load data on start
+    window.onload = fetchWithdrawals;
+</script>
+</body>
+</html>

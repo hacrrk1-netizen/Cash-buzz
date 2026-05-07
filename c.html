@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Support - Admin</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body { margin: 0; font-family: sans-serif; background: #0f172a; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #1e3a8a; padding: 10px 15px; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .back-link { color: white; text-decoration: none; font-size: 18px; margin-right: 15px; }
+        .header-title { flex: 1; font-weight: bold; font-size: 16px; }
+
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Left Sidebar */
+        .user-list { width: 30%; background: #1e293b; border-right: 1px solid #334155; overflow-y: auto; }
+        .user-item { padding: 10px; border-bottom: 1px solid #334155; cursor: pointer; }
+        .user-item.active { background: #334155; border-left: 3px solid #60a5fa; }
+        .uid-text { font-weight: bold; font-size: 12px; color: #60a5fa; display: block; }
+        .last-msg { font-size: 10px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        
+        /* Right Chat Area */
+        .chat-area { width: 70%; display: flex; flex-direction: column; background: #f1f5f9; }
+        .chat-header { padding: 8px 12px; background: white; border-bottom: 1px solid #e2e8f0; font-size: 13px; font-weight: bold; color: #1e3a8a; }
+        .messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #f8fafc; }
+        
+        .msg { max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-wrap: break-word; }
+        .msg.left { align-self: flex-start; background: #e2e8f0; color: #333; border-bottom-left-radius: 2px; }
+        .msg.right { align-self: flex-end; background: #1e3a8a; color: white; border-bottom-right-radius: 2px; }
+        
+        /* Fixed Input Box */
+        .input-box { padding: 8px; background: white; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 5px; }
+        input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 20px; outline: none; font-size: 13px; color: #333; }
+        .send-btn { background: #1e3a8a; color: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="admin.html" class="back-link">←</a>
+    <div class="header-title">SUPPORT CHAT 🎧</div>
+</div>
+
+<div class="main-container">
+    <div class="user-list" id="userList"></div>
+    <div class="chat-area">
+        <div class="chat-header" id="currentUid">Select User</div>
+        <div class="messages" id="messageContainer"></div>
+        <div class="input-box">
+            <input type="text" id="replyInput" placeholder="Reply..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        projectId: "admin222-a87bb",
+        appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let activeUid = "";
+
+    function loadUsers() {
+        db.ref('chats').on('value', (snapshot) => {
+            const list = document.getElementById('userList');
+            list.innerHTML = "";
+            const data = snapshot.val();
+            if (!data) return;
+            Object.keys(data).forEach(uid => {
+                const msgs = Object.values(data[uid]);
+                const last = msgs[msgs.length - 1];
+                const item = document.createElement('div');
+                item.className = `user-item ${activeUid === uid ? 'active' : ''}`;
+                item.onclick = () => openChat(uid);
+                item.innerHTML = `<span class="uid-text">UID: ${uid}</span><span class="last-msg">${last.text || ''}</span>`;
+                list.appendChild(item);
+            });
+        });
+    }
+
+    function openChat(uid) {
+        activeUid = uid;
+        document.getElementById('currentUid').innerText = "UID: " + uid;
+        db.ref('chats/' + uid).on('value', (snapshot) => {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = "";
+            const messages = snapshot.val();
+            if (messages) {
+                Object.values(messages).forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = `msg ${m.sender === 'admin' ? 'right' : 'left'}`;
+                    div.innerText = m.text;
+                    container.appendChild(div);
+                });
+                container.scrollTop = container.scrollHeight;
+            }
+        });
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('replyInput');
+        const text = input.value.trim();
+        if (!text || !activeUid) return;
+        try {
+            await db.ref('chats/' + activeUid).push().set({
+                uid: activeUid, text: text, sender: 'admin', timestamp: Date.now()
+            });
+            input.value = "";
+        } catch (e) { alert("Error!"); }
+    }
+    loadUsers();
+</script>
+</body>
+</html>

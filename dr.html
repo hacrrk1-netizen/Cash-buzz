@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - ANTI_PANEL</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; margin: 0; padding: 15px; }
+        
+        /* Updated Header with Back Button */
+        .header { 
+            background: #1e3a8a; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative;
+            font-size: 20px; 
+            font-weight: bold; 
+            margin-bottom: 20px; 
+            border-radius: 0 0 15px 15px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .back-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
+
+        h2 { font-size: 18px; color: #94a3b8; margin: 20px 0 10px; border-left: 4px solid #3b82f6; padding-left: 10px; }
+        .card { background: white; color: #333; padding: 15px; border-radius: 12px; margin-bottom: 15px; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card p { margin: 4px 0; font-size: 14px; }
+        .amt-tag { font-size: 18px; color: #16a34a; font-weight: bold; }
+        .actions { display: flex; gap: 10px; margin-top: 12px; }
+        .btn-ok { background: #22c55e; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; cursor: pointer; font-weight: bold; }
+        .btn-no { background: #ef4444; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; cursor: pointer; font-weight: bold; }
+        .admin-box { margin-top: 30px; padding: 15px; background: #1e293b; border-radius: 12px; border: 2px solid #3b82f6; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: none; box-sizing: border-box; }
+        .lock-btn { width: 100%; padding: 15px; background: #f59e0b; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="admin.html" class="back-btn">⬅ Back</a>
+    DEPOSIT CONTROL 📥
+</div>
+
+<h2>PENDING REQUESTS</h2>
+<div id="pendingList"><p style="text-align:center;">Loading...</p></div>
+
+<div class="admin-box">
+    <h3 style="margin-top:0; color: #3b82f6;">🚫 MANUAL OFFER LOCK</h3>
+    <input type="text" id="lockUid" placeholder="Enter User UID">
+    <select id="lockOfferId">
+        <option value="off_20">Offer 1 (₹20)</option>
+        <option value="off_1000">Offer 2 (₹1000)</option>
+        <option value="off_2000">Offer 3 (₹2000)</option>
+    </select>
+    <button class="lock-btn" onclick="manualLock()">SET SOLD OUT</button>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+  authDomain: "admin222-a87bb.firebaseapp.com",
+  databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+  projectId: "admin222-a87bb",
+  storageBucket: "admin222-a87bb.firebasestorage.app",
+  messagingSenderId: "125393999260",
+  appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Load Requests
+db.ref('deposits').on('value', (snapshot) => {
+    const list = document.getElementById("pendingList");
+    list.innerHTML = "";
+    let count = 0;
+    snapshot.forEach(child => {
+        const req = child.val();
+        if(req.status === "Pending") {
+            count++;
+            list.innerHTML += `
+                <div class="card">
+                    <p><b>User:</b> ${req.name} <br><b>UID:</b> <small>${req.uid}</small></p>
+                    <p class="amt-tag">₹${req.amount}</p>
+                    <p><b>UTR:</b> ${req.utr}</p>
+                    <div class="actions">
+                        <button class="btn-ok" onclick="approve('${req.utr}', '${req.uid}', ${req.amount})">APPROVE</button>
+                        <button class="btn-no" onclick="reject('${req.utr}')">REJECT</button>
+                    </div>
+                </div>`;
+        }
+    });
+    if(count === 0) list.innerHTML = "<p style='text-align:center;'>No pending tasks.</p>";
+});
+
+function approve(utr, uid, amount) {
+    if(!confirm("Approve ₹" + amount + "?")) return;
+    db.ref('deposits/' + utr).update({ status: 'Success' }).then(() => {
+        db.ref('users/' + uid + '/balance').transaction(b => (b || 0) + amount);
+        alert("Success!");
+    });
+}
+
+function reject(utr) {
+    if(!confirm("Reject?")) return;
+    db.ref('deposits/' + utr).update({ status: 'Rejected' });
+}
+
+function manualLock() {
+    const uid = document.getElementById("lockUid").value;
+    const offId = document.getElementById("lockOfferId").value;
+    if(!uid) return alert("UID daal bhai!");
+    db.ref('manual_sold/' + uid + '/' + offId).set(true)
+    .then(() => alert("Offer Locked for this user!"));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>cash buzz</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Poppins', sans-serif; background: radial-gradient(circle at top, #1e3a8a, #0f172a); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; user-select: none; }
+        .container { width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); padding: 30px 25px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.4); text-align: center; animation: slideUp 0.6s ease-out; position: relative; z-index: 10; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .header h2 { color: #fbbf24; margin: 0 0 10px 0; font-size: 28px; letter-spacing: 2px; text-transform: uppercase; }
+        .header p { color: #94a3b8; font-size: 13px; margin-bottom: 25px; }
+        .tabs { display: flex; background: rgba(0, 0, 0, 0.2); padding: 5px; border-radius: 14px; margin-bottom: 25px; }
+        .tab { flex: 1; padding: 12px; color: #94a3b8; cursor: pointer; font-weight: 600; transition: 0.3s; border-radius: 10px; }
+        .tab.active { background: #fbbf24; color: #0f172a; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3); }
+        .form { display: none; } .form.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .input-group { position: relative; margin-bottom: 15px; }
+        input { width: 100%; padding: 14px 15px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; font-size: 15px; transition: 0.3s; }
+        input:focus { border-color: #fbbf24; background: rgba(255, 255, 255, 0.15); }
+        button { width: 100%; padding: 15px; background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #0f172a; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.3s; text-transform: uppercase; }
+        button:disabled { opacity: 0.6; }
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; padding: 12px 25px; border-radius: 50px; font-weight: 600; font-size: 14px; display: none; z-index: 1000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="container">
+    <div class="header"><h2>cash buzz</h2><p>Login or create account to play</p></div>
+    <div class="tabs">
+        <div class="tab active" onclick="showForm('register', this)">Register</div>
+        <div class="tab" onclick="showForm('login', this)">Login</div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="register" class="form active">
+        <div class="input-group"><input type="text" id="r_name" placeholder="Full Name"></div>
+        <div class="input-group"><input type="number" id="r_phone" placeholder="Mobile (10 digit)"></div>
+        <div class="input-group"><input type="password" id="r_pass" placeholder="Create Password"></div>
+        <button id="regBtn" onclick="register()">Create Account</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="login" class="form">
+        <div class="input-group"><input type="number" id="l_phone" placeholder="Mobile Number"></div>
+        <div class="input-group"><input type="password" id="l_pass" placeholder="Enter Password"></div>
+        <button id="logBtn" onclick="login()">Sign In</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, get, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        projectId: "admin222-a87bb",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        appId: "1:125393999260:web:be03947a943f50cb0be459"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function showToast(msg, isSuccess = false) {
+        const t = document.getElementById("toast");
+        t.innerText = msg;
+        t.style.background = isSuccess ? "#10b981" : "#ef4444";
+        t.style.display = "block";
+        setTimeout(() => t.style.display = "none", 2500);
+    }
+
+    // --- SECRET ADMIN HOLD FEATURE (10 SECONDS) ---
+    let holdTimer;
+    const startHold = () => {
+        holdTimer = setTimeout(() => {
+            window.location.href = 'admin.html';
+        }, 10000); // 10 Seconds
+    };
+    const stopHold = () => clearTimeout(holdTimer);
+
+    document.addEventListener('mousedown', startHold);
+    document.addEventListener('mouseup', stopHold);
+    document.addEventListener('touchstart', startHold);
+    document.addEventListener('touchend', stopHold);
+    // ----------------------------------------------
+
+    window.register = async function() {
+        const name = document.getElementById("r_name").value.trim();
+        const rawPhone = document.getElementById("r_phone").value.trim();
+        const phone = "91" + rawPhone;
+        const pass = document.getElementById("r_pass").value;
+        const btn = document.getElementById("regBtn");
+
+        if (!name || rawPhone.length !== 10 || !pass) return showToast("Enter all details correctly!");
+        btn.disabled = true;
+
+        try {
+            const userRef = ref(db, 'users/' + phone);
+            const snap = await get(userRef);
+            if (snap.exists()) {
+                showToast("Number already registered! ❌");
+                btn.disabled = false;
+                return;
+            }
+
+            const metaRef = ref(db, 'metadata/last_uid');
+            const result = await runTransaction(metaRef, (currentValue) => {
+                return (currentValue || 51628) + 1;
+            });
+
+            const newUid = result.snapshot.val();
+            await set(userRef, {
+                name, number: phone, password: pass, uid: newUid, balance: 0, email: "Not Set", time: new Date().toLocaleString()
+            });
+
+            showToast("Account Created! ✅", true);
+            localStorage.setItem("user_uid", newUid);
+            localStorage.setItem("user_phone", phone);
+            setTimeout(() => window.location.href = `lobby.html?uid=${newUid}`, 1500);
+        } catch (e) {
+            showToast("Database Error!");
+            btn.disabled = false;
+        }
+    }
+
+    window.login = async function() {
+        const rawPhone = document.getElementById("l_phone").value.trim();
+        const phone = "91" + rawPhone;
+        const pass = document.getElementById("l_pass").value;
+        const btn = document.getElementById("logBtn");
+
+        if (!rawPhone || !pass) return showToast("Fill all fields!");
+
+        btn.disabled = true;
+        try {
+            const snap = await get(ref(db, 'users/' + phone));
+            if (snap.exists() && snap.val().password === pass) {
+                showToast("login successfully", true);
+                localStorage.setItem("user_uid", snap.val().uid);
+                localStorage.setItem("user_phone", phone);
+                setTimeout(() => window.location.href = `lobby.html?uid=${snap.val().uid}`, 1500);
+            } else {
+                showToast("Wrong Mobile or Password! wrong");
+                btn.disabled = false;
+            }
+        } catch (e) {
+            showToast("Login Failed!");
+            btn.disabled = false;
+        }
+    }
+
+    window.showForm = function(type, el) {
+        document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(type).classList.add('active');
+        el.classList.add('active');
+    }
+</script>
+</body>
+</html>

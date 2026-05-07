@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>cash buzz</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        *{ -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { margin: 0; font-family: 'Segoe UI', Arial; background: #f5f5f5; scroll-behavior: smooth; }
+        
+        .header { background: white; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.08); position: sticky; top:0; z-index: 100; }
+        .back { background: #eee; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .user-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+        .uid-display { font-size: 10px; color: #888; font-family: monospace; font-weight: bold; }
+        .wallet-display { background: #fff8f6; padding: 4px 12px; border-radius: 15px; border: 1px solid #ffe0d6; color: #ff3c00; font-weight: bold; font-size: 15px; cursor: pointer; }
+        
+        .container { max-width: 420px; margin: auto; padding: 15px; }
+        .quick-amounts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .amt-box { background: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; border: 1px solid #ddd; cursor: pointer; transition: 0.2s; }
+        .amt-box:active { transform: scale(0.95); background: #ff3c00; color: white; }
+        .info-text { font-size: 14px; color: #666; margin: 15px 0 10px 5px; font-weight: 600; text-align: center; }
+        
+        .offer { position: relative; background: white; padding: 18px; margin-bottom: 16px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #eee; transition: 0.2s; }
+        .offer.active { border: 2px solid #ff3c00; }
+        .offer.sold-out { opacity: 0.6; pointer-events: none; border: 1px solid #ccc; filter: grayscale(1); }
+        .sold-text { display: none; color: red; font-weight: bold; font-size: 14px; border: 1px solid red; padding: 2px 8px; border-radius: 4px; }
+        .offer.sold-out .sold-text { display: block; }
+        .offer.sold-out .badge { display: none; }
+        .tag { position: absolute; top: -10px; left: 15px; background: #ff3c00; color: white; font-size: 11px; padding: 5px 10px; border-radius: 6px; }
+        .left-text { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+        .small { text-decoration: line-through; color: #777; font-size: 14px; font-weight: 600; }
+        .big { font-size: 22px; font-weight: bold; color: #000; }
+        .label-real { font-size: 10px; color: #999; text-transform: uppercase; }
+        .label-pay { font-size: 10px; color: #ff3c00; text-transform: uppercase; font-weight: bold; }
+        .badge { background: #ffb300; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; }
+        
+        .payment { display: none; background: white; padding: 20px; border-radius: 12px; margin-top: 15px; text-align: center; border: 2px dashed #ddd; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; outline: none; font-size: 14px; }
+        button { width: 100%; padding: 14px; margin-top: 10px; border: none; border-radius: 10px; background: #ff3c00; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .history { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; }
+
+        /* --- PREMIUM ALERT UI --- */
+        .custom-alert-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center;
+            z-index: 2000; backdrop-filter: blur(4px);
+        }
+        .custom-alert {
+            background: white; width: 85%; max-width: 320px; border-radius: 20px;
+            padding: 25px; text-align: center; animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .alert-icon { font-size: 50px; margin-bottom: 15px; }
+        .alert-msg { font-size: 16px; color: #333; font-weight: 600; line-height: 1.5; margin-bottom: 20px; }
+        .alert-btn {
+            background: #ff3c00; color: white; border: none; padding: 12px 30px;
+            border-radius: 10px; font-weight: bold; width: 100%; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Custom Alert Markup -->
+<div id="customAlertOverlay" class="custom-alert-overlay">
+    <div class="custom-alert">
+        <div id="alertIcon" class="alert-icon">⚠️</div>
+        <div id="alertMessage" class="alert-msg">Message here...</div>
+        <button class="alert-btn" onclick="closeAlert()">Okay</button>
+    </div>
+</div>
+
+<div class="header">
+    <div class="back" onclick="location.href='lobby.html'">⬅ Back</div>
+    <div class="user-meta">
+        <div class="uid-display">ID: <span id="user-uid">Loading...</span></div>
+        <div class="wallet-display" onclick="location.href='profile.html'">₹<span id="balDisplay">0.00</span></div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="info-text">Quick Recharge</div>
+    <div class="quick-amounts">
+        <div class="amt-box" onclick="selectQuick(100)">₹100</div>
+        <div class="amt-box" onclick="selectQuick(300)">₹300</div>
+        <div class="amt-box" onclick="selectQuick(500)">₹500</div>
+        <div class="amt-box" onclick="selectQuick(1000)">₹1000</div>
+        <div class="amt-box" onclick="selectQuick(2000)">₹2000</div>
+        <div class="amt-box" onclick="selectQuick(5000)">₹5000</div>
+    </div>
+
+    <div class="info-text">Special Offers (Max 2 Per Offer)</div>
+    <div id="off_20" class="offer" onclick="selectOffer(this,100,20,'off_20')">
+        <div class="tag">OFFER</div>
+        <div class="left-text"><span class="label-real">Real Price</span><span class="small">₹100</span><span class="label-pay">Pay Only</span><span class="big">₹20</span></div>
+        <div class="badge">80% OFF</div>
+        <div class="sold-text">SOLD OUT</div>
+    </div>
+    <div id="off_1000" class="offer" onclick="selectOffer(this,5000,1000,'off_1000')">
+        <div class="tag">OFFER</div>
+        <div class="left-text"><span class="label-real">Real Price</span><span class="small">₹5000</span><span class="label-pay">Pay Only</span><span class="big">₹1000</span></div>
+        <div class="badge">80% OFF</div>
+        <div class="sold-text">SOLD OUT</div>
+    </div>
+    <div id="off_2000" class="offer" onclick="selectOffer(this,10000,2000,'off_2000')">
+        <div class="tag">OFFER</div>
+        <div class="left-text"><span class="label-real">Real Price</span><span class="small">₹10000</span><span class="label-pay">Pay Only</span><span class="big">₹2000</span></div>
+        <div class="badge">80% OFF</div>
+        <div class="sold-text">SOLD OUT</div>
+    </div>
+
+    <div id="payment" class="payment">
+        <img id="qrImg" width="160" style="margin-bottom:10px;">
+        <p id="amt" style="margin:10px 0;"></p>
+        <p style="font-size:13px; color:#555;">UPI: <b style="color:#000;">fbnanbspt@ptyes</b></p>
+        <input type="text" id="fullName" placeholder="Enter Your Full Name">
+        <input type="number" id="phone" placeholder="Enter Your Number">
+        <input type="text" id="utr" placeholder="Enter 12 Digit Transaction UTR">
+        <button id="subBtn" onclick="submitReq()">Confirm Deposit</button>
+    </div>
+
+    <div class="history">
+        <h3>My Deposit History</h3>
+        <div id="historyList"></div>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+  authDomain: "admin222-a87bb.firebaseapp.com",
+  databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+  projectId: "admin222-a87bb",
+  storageBucket: "admin222-a87bb.firebasestorage.app",
+  messagingSenderId: "125393999260",
+  appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const userPhone = localStorage.getItem('user_phone');
+
+// --- CUSTOM ALERT LOGIC ---
+function showAlert(msg, type='warn', reload=false) {
+    const overlay = document.getElementById("customAlertOverlay");
+    const icon = document.getElementById("alertIcon");
+    const message = document.getElementById("alertMessage");
+    
+    message.innerText = msg;
+    icon.innerText = type === 'success' ? '✅' : '⚠️';
+    overlay.style.display = "flex";
+    
+    overlay.onclick = function() {
+        closeAlert();
+        if(reload) location.reload();
+    }
+}
+
+function closeAlert() {
+    document.getElementById("customAlertOverlay").style.display = "none";
+}
+
+function startLiveBalance() {
+    if (!userPhone) return;
+    db.ref('users/' + userPhone).on('value', (snapshot) => {
+        const userData = snapshot.val();
+        if (userData) {
+            if (userData.balance !== undefined) {
+                const currentBal = parseFloat(userData.balance).toFixed(2);
+                document.getElementById("balDisplay").innerText = currentBal;
+                localStorage.setItem('user_balance', currentBal);
+            }
+            if (userData.uid) {
+                document.getElementById("user-uid").innerText = userData.uid;
+            }
+        }
+    });
+}
+
+let selectedAmount = 0;
+let currentOfferId = null;
+
+function selectQuick(amt) {
+    currentOfferId = null;
+    document.querySelectorAll(".offer").forEach(o=> o.classList.remove("active"));
+    showPayment(amt, amt);
+}
+
+function selectOffer(el, real, pay, offId){
+    currentOfferId = offId;
+    document.querySelectorAll(".offer").forEach(o=> o.classList.remove("active"));
+    el.classList.add("active");
+    showPayment(real, pay);
+}
+
+function showPayment(real, pay) {
+    selectedAmount = pay;
+    const payDiv = document.getElementById("payment");
+    payDiv.style.display = "block";
+    let upi = `upi://pay?pa=fbnanbspt@ptyes&am=${pay}`;
+    document.getElementById("qrImg").src = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(upi);
+    document.getElementById("amt").innerHTML = `<b style="font-size:20px;">Pay ₹${pay}</b><br><span style="text-decoration:line-through;color:gray;">₹${real}</span>`;
+    
+    setTimeout(() => {
+        payDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+}
+
+function submitReq(){
+    let name = document.getElementById("fullName").value;
+    let phone = document.getElementById("phone").value;
+    let utr = document.getElementById("utr").value;
+    let btn = document.getElementById("subBtn");
+
+    if(!name || !phone || utr.length < 12){
+        showAlert("Please enter Name, Phone and 12-digit UTR correctly.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+
+    const depositData = {
+        uid: document.getElementById("user-uid").innerText,
+        name: name,
+        phone: phone,
+        utr: utr,
+        amount: selectedAmount,
+        offerId: currentOfferId,
+        status: "Pending",
+        date: new Date().toLocaleString()
+    };
+
+    db.ref('deposits/' + utr).set(depositData).then(() => {
+        showAlert("Deposit request submitted successfully! Admin will verify soon.", "success", true);
+    }).catch(e => { 
+        showAlert("Error: " + e.message); 
+        btn.disabled = false; 
+        btn.innerText = "Confirm Deposit";
+    });
+}
+
+function loadHistoryAndOffers() {
+    db.ref('manual_sold/' + userPhone).on('value', (snap) => {
+        if(snap.exists()){
+            const locks = snap.val();
+            if(locks.off_20) document.getElementById("off_20").classList.add("sold-out");
+            if(locks.off_1000) document.getElementById("off_1000").classList.add("sold-out");
+            if(locks.off_2000) document.getElementById("off_2000").classList.add("sold-out");
+        }
+    });
+
+    db.ref('deposits').orderByChild('phone').equalTo(userPhone).on('value', (snapshot) => {
+        const list = document.getElementById("historyList");
+        list.innerHTML = "";
+        let offerCounts = { off_20: 0, off_1000: 0, off_2000: 0 };
+        let items = [];
+
+        snapshot.forEach(child => {
+            let d = child.val();
+            items.push(d);
+            if(d.offerId && d.status === 'Success') {
+                offerCounts[d.offerId]++;
+            }
+        });
+
+        for(let id in offerCounts) {
+            if(offerCounts[id] >= 2) {
+                const el = document.getElementById(id);
+                if(el) el.classList.add('sold-out');
+            }
+        }
+
+        items.reverse().forEach(item => {
+            let color = item.status === 'Success' ? "#4caf50" : (item.status === 'Rejected' ? "#f44336" : "#ff9800");
+            list.innerHTML += `
+                <div style="background:white; padding:12px; border-radius:10px; margin-bottom:10px; border-left: 5px solid ${color};">
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>₹${item.amount}</b>
+                        <b style="color:${color}; font-size:12px;">${item.status.toUpperCase()}</b>
+                    </div>
+                    <small style="color:#777;">UTR: ${item.utr}</small><br>
+                    <small style="color:#999;">${item.date}</small>
+                </div>`;
+        });
+        if(items.length === 0) list.innerHTML = "<p style='text-align:center; color:#999;'>No history found.</p>";
+    });
+}
+
+window.onload = function() {
+    startLiveBalance();
+    loadHistoryAndOffers();
+};
+</script>
+</body>
+</html>

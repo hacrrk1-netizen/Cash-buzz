@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Service - cash buzz</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body { margin: 0; font-family: Arial; background: #f4f7f6; display: flex; flex-direction: column; height: 100vh; }
+        .header { background: #1e3a8a; color: white; padding: 15px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .back-btn { cursor: pointer; font-size: 20px; text-decoration: none; color: white; }
+        
+        .user-info { background: white; padding: 10px 20px; border-bottom: 1px solid #ddd; font-weight: bold; color: #555; flex-shrink: 0; display: flex; justify-content: space-between; }
+        
+        .chat-container { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #e5e7eb; }
+        
+        /* Bubbles */
+        .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; font-size: 14px; line-height: 1.4; word-wrap: break-word; position: relative; }
+        .msg.left { align-self: flex-start; background: white; color: #333; border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .msg.right { align-self: flex-end; background: #1e3a8a; color: white; border-bottom-right-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        .footer { background: white; padding: 10px; display: flex; gap: 10px; box-sizing: border-box; border-top: 1px solid #ddd; }
+        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
+        button { background: #1e3a8a; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="lobby.html" class="back-btn">⬅</a>
+    <span>Customer Support</span>
+</div>
+
+<div class="user-info">
+    <span>User ID: <span id="user-uid">Loading...</span></span>
+    <span id="status" style="font-size: 10px; color: #10b981;">● Online</span>
+</div>
+
+<div class="chat-container" id="chat">
+    <div class="msg left">Hello! How can we help you today?</div>
+    <!-- Messages will load here -->
+</div>
+
+<div class="footer">
+    <input type="text" id="msgInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
+    <button onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+    // Firebase Configuration (Using your existing DB)
+    const firebaseConfig = {
+        apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        projectId: "admin222-a87bb",
+        appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    let userUID = localStorage.getItem('user_uid') || "Guest_" + Math.floor(Math.random() * 1000);
+
+    // 1. Initialize Chat and Listen for Messages
+    function initChat() {
+        document.getElementById('user-uid').innerText = userUID;
+        
+        // Real-time listener for this specific User's Chat
+        db.ref('chats/' + userUID).on('value', (snapshot) => {
+            const container = document.getElementById('chat');
+            container.innerHTML = '<div class="msg left">Hello! How can we help you today?</div>';
+            
+            const data = snapshot.val();
+            if (data) {
+                Object.values(data).forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = `msg ${m.sender === 'admin' ? 'left' : 'right'}`;
+                    div.innerText = m.text;
+                    container.appendChild(div);
+                });
+                container.scrollTop = container.scrollHeight;
+            }
+        });
+    }
+
+    // 2. Send Message function
+    async function sendMessage() {
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        
+        if (!text) return;
+
+        // Firebase path: chats / [UID] / [unique_id]
+        const newMessageRef = db.ref('chats/' + userUID).push();
+        
+        try {
+            await newMessageRef.set({
+                uid: userUID,
+                text: text,
+                sender: 'user',
+                timestamp: Date.now()
+            });
+            
+            // Notification for Admin (Optional but helpful for c.html)
+            db.ref('admin_notifications').set({
+                last_msg_from: userUID,
+                time: Date.now()
+            });
+
+            input.value = "";
+        } catch (e) {
+            alert("Message sending failed. Check connection.");
+        }
+    }
+
+    initChat();
+</script>
+</body>
+</html>

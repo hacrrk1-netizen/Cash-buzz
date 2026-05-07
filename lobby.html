@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>cash buzz</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Segoe UI', Arial; background: #0f172a; color: white; }
+        
+        .topbar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #1e3a8a; 
+            color: white; 
+            padding: 12px 15px; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3); 
+        }
+        
+        .menu { font-size: 24px; cursor: pointer; }
+        .user-info { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .uid-text { font-size: 10px; color: #94a3b8; font-family: monospace; letter-spacing: 0.5px; font-weight: bold; }
+        .balance-container { 
+            display: flex; 
+            align-items: center; 
+            background: rgba(255,255,255,0.1); 
+            padding: 5px 12px; 
+            border-radius: 20px; 
+            gap: 10px; 
+            cursor: pointer; 
+            border: 1px solid rgba(255,255,255,0.2); 
+        }
+        .bal-text { font-weight: bold; font-size: 16px; color: #fbbf24; }
+        .plus-btn { background: #fbbf24; color: #1e3a8a; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 900; font-size: 16px; }
+        
+        .sidebar { position: fixed; top: 0; left: -260px; width: 250px; height: 100%; background: #1e293b; box-shadow: 5px 0 15px rgba(0,0,0,0.5); padding-top: 20px; transition: 0.3s; z-index: 1000; }
+        .sidebar.active { left: 0; }
+        .sidebar a { display: block; padding: 15px 20px; text-decoration: none; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 500; }
+        .logout { color: #f87171 !important; margin-top: 20px; }
+        
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; z-index: 900; backdrop-filter: blur(3px); }
+        .overlay.active { display: block; }
+        
+        .content { padding: 15px; padding-bottom: 50px; }
+        h2 { font-size: 14px; margin: 20px 0 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .quiz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        .quiz-box { 
+            background: #1e293b; 
+            border-radius: 15px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+            transition: 0.3s; 
+            cursor: pointer; 
+            overflow: hidden; 
+            aspect-ratio: 1 / 1; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .quiz-box:active { transform: scale(0.96); }
+        .quiz-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        
+        /* Premium Status Modal */
+        .status-modal { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
+            width: 85%; max-width: 320px; background: #1e293b; border-radius: 20px;
+            padding: 25px; text-align: center; z-index: 3000; display: none; opacity: 0;
+            transition: 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .status-modal.active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .status-icon { font-size: 40px; margin-bottom: 15px; }
+        .status-msg { font-size: 16px; font-weight: 600; line-height: 1.4; margin-bottom: 20px; }
+        .status-btn { background: #fbbf24; color: #1e3a8a; border: none; padding: 10px 25px; border-radius: 10px; font-weight: bold; width: 100%; }
+
+        .modal { position: fixed; bottom: -300px; left: 0; width: 100%; background: #1e293b; border-radius: 25px 25px 0 0; padding: 30px 20px; transition: 0.4s; z-index: 2000; text-align: center; }
+        .modal.active { bottom: 0; }
+        .btns { display: flex; gap: 15px; }
+        .btns button { flex: 1; padding: 15px; border: none; border-radius: 12px; font-weight: bold; }
+        .yes { background: #ef4444; color: white; }
+        .no { background: #334155; color: white; }
+    </style>
+</head>
+<body>
+
+<div id="overlay" class="overlay" onclick="closeAll()"></div>
+
+<div id="statusModal" class="status-modal">
+    <div class="status-icon" id="statusIcon">⚠️</div>
+    <div id="statusMsg" class="status-msg"></div>
+    <button class="status-btn" onclick="closeAll()">OK</button>
+</div>
+
+<div id="sidebar" class="sidebar">
+    <a href="#" onclick="goDeposit()">📥 Deposit</a>
+    <a href="#" onclick="goWithdraw()">📤 Withdraw</a>
+    <a href="profile.html">👤 My Profile</a>
+    <a href="customer.html">🎧 Customer Service</a>
+    <a href="#" class="logout" onclick="openLogout()">🚪 Logout</a>
+</div>
+
+<div class="topbar">
+    <div class="menu" onclick="toggleMenu()">☰</div>
+    <div class="user-info">
+        <div class="uid-text">UID: <span id="user-uid">Loading...</span></div>
+        <div class="balance-container" onclick="goDeposit()">
+            <span class="bal-text">₹<span id="bal">0.00</span></span>
+            <div class="plus-btn">+</div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <h2> big deposit permanent games expert</h2>
+    <div class="quiz-grid">
+        <div class="quiz-box" onclick="checkGameAccess()"><img src="image1.png"></div>
+        <div class="quiz-box" onclick="checkGameAccess()"><img src="image3.png"></div>
+    </div>
+
+    <h2> esay to earn Limited</h2>
+    <div class="quiz-grid">
+        <div class="quiz-box" onclick="location.href='mine.html'"><img src="image2.png"></div>
+        <div class="quiz-box" onclick="location.href='chicken.html'"><img src="image4.png"></div>
+    </div>
+
+    <h2> big deposit permanent games RUSH </h2>
+    <div class="quiz-grid">
+        <div class="quiz-box" onclick="checkGameAccess()"><img src="image5.png"></div>
+        <div class="quiz-box" onclick="checkGameAccess()"><img src="image6.png"></div>
+    </div>
+</div>
+
+<div id="logoutModal" class="modal">
+    <h3>Are you sure you want to logout?</h3>
+    <div class="btns">
+        <button class="yes" onclick="logout()">Yes, Logout</button>
+        <button class="no" onclick="closeAll()">Cancel</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        projectId: "admin222-a87bb",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let userCurrentBalance = 0;
+
+    function loadUserData() {
+        const userPhone = localStorage.getItem('user_phone');
+        const balElement = document.getElementById("bal");
+        const uidElement = document.getElementById("user-uid");
+        if (!userPhone) { window.location.href = "index.html"; return; }
+
+        database.ref('users/' + userPhone).on('value', (snapshot) => {
+            const userData = snapshot.val();
+            if (userData) {
+                if (userData.uid) { uidElement.innerText = userData.uid; }
+                if (userData.balance !== undefined) {
+                    userCurrentBalance = parseFloat(userData.balance);
+                    balElement.innerText = userCurrentBalance.toFixed(2);
+                }
+            }
+        });
+    }
+
+    // GAME ACCESS LOGIC
+    function checkGameAccess() {
+        const modal = document.getElementById("statusModal");
+        const msg = document.getElementById("statusMsg");
+        const icon = document.getElementById("statusIcon");
+        const overlay = document.getElementById("overlay");
+
+        overlay.classList.add("active");
+        modal.classList.add("active");
+
+        if (userCurrentBalance <= 0) {
+            icon.innerText = "❌";
+            msg.innerText = "High amount deposit first";
+            msg.style.color = "#ef4444"; // Red color
+        } else {
+            icon.innerText = "⚠️";
+            msg.innerText = "Deposit amount is low to start this game";
+            msg.style.color = "white"; // Normal English text
+        }
+    }
+
+    window.onload = loadUserData;
+    function toggleMenu(){
+        document.getElementById("sidebar").classList.toggle("active");
+        document.getElementById("overlay").classList.toggle("active");
+    }
+    function openLogout(){
+        document.getElementById("logoutModal").classList.add("active");
+        document.getElementById("overlay").classList.add("active");
+    }
+    function closeAll(){
+        document.getElementById("sidebar").classList.remove("active");
+        document.getElementById("overlay").classList.remove("active");
+        document.getElementById("logoutModal").classList.remove("active");
+        document.getElementById("statusModal").classList.remove("active");
+    }
+    function logout(){ localStorage.clear(); window.location.href = "index.html"; }
+    function goDeposit(){ window.location.href = "deposit.html"; }
+    function goWithdraw(){ window.location.href = "withdraw.html"; }
+    function goCustomer(){ window.location.href = "customer.html"; }
+</script>
+</body>
+</html>

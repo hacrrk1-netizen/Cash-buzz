@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>cash buzz</title>
+    <!-- Firebase SDKs (Compatibility Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Arial; background: radial-gradient(circle at top,#1e293b,#020617); color: white; min-height: 100vh; user-select: none; }
+        .header { padding: 18px; display: flex; justify-content: space-between; align-items: center; }
+        .back { background: rgba(255,255,255,0.08); padding: 8px 14px; border-radius: 12px; backdrop-filter: blur(6px); cursor: pointer; }
+        .balance { font-weight: bold; font-size: 16px; color: #10b981; }
+        .wrapper { padding: 15px; display: flex; justify-content: center; }
+        .card { width: 100%; max-width: 380px; background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border-radius: 20px; padding: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.08); }
+        .title { font-size: 20px; font-weight: 600; margin-bottom: 18px; text-align: center; }
+        .input-group { margin-bottom: 14px; }
+        label { font-size: 12px; color: #94a3b8; margin-left: 5px; }
+        input { width: 100%; padding: 14px; margin-top: 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none; }
+        input:focus { border-color: #3b82f6; }
+        input:disabled { opacity: 0.6; cursor: not-allowed; }
+        button { width: 100%; padding: 15px; margin-top: 10px; border-radius: 14px; border: none; background: linear-gradient(90deg,#3b82f6,#6366f1); color: white; font-weight: bold; font-size: 15px; cursor: pointer; }
+        button:disabled { opacity: 0.5; }
+        .history { max-width: 380px; margin: 25px auto; padding: 0 15px; }
+        .item { background: rgba(255,255,255,0.05); padding: 15px; margin-top: 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .amt { font-weight: bold; font-size: 18px; }
+        .status { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .pending { background: #f59e0b; color: #000; }
+        .completed { background: #10b981; color: #fff; }
+        .rejected { background: #ef4444; color: #fff; }
+        .details { font-size: 12px; color: #94a3b8; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 12px 25px; border-radius: 50px; display: none; z-index: 10000; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<div class="header">
+    <div class="back" onclick="location.href='lobby.html'">⬅ Back</div>
+    <div class="balance" id="balDisplay">₹0.00</div>
+</div>
+
+<div class="wrapper">
+    <div class="card">
+        <div class="title">Withdrawal Request</div>
+        <div class="input-group">
+            <label>Full Name</label>
+            <input id="name" placeholder="Name as per Bank">
+        </div>
+        <div class="input-group">
+            <label>UPI ID</label>
+            <input id="upi" placeholder="example@ybl">
+        </div>
+        <div class="input-group">
+            <label>Confirm UPI ID</label>
+            <input id="upi2" placeholder="Re-enter UPI">
+        </div>
+        <div class="input-group">
+            <label>Amount (Min ₹200)</label>
+            <input type="number" id="amount" placeholder="Min 200">
+        </div>
+        <div class="input-group">
+            <label>User UID</label>
+            <input id="uid" placeholder="Fetching UID..." readonly disabled>
+        </div>
+        <button id="btn" onclick="withdraw()">Submit Withdrawal</button>
+    </div>
+</div>
+
+<div class="history">
+    <h3>Withdraw History</h3>
+    <div id="historyList">
+        <p style="text-align:center; color:#64748b; margin-top:20px;">Fetching records...</p>
+    </div>
+</div>
+
+<script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        projectId: "admin222-a87bb",
+        appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const userPhone = localStorage.getItem('user_phone');
+
+    // --- SECRET ADMIN HOLD (10 SECONDS) ---
+    let holdTimer;
+    document.addEventListener('touchstart', () => { holdTimer = setTimeout(() => { window.location.href='admin.html'; }, 10000); });
+    document.addEventListener('touchend', () => { clearTimeout(holdTimer); });
+    document.addEventListener('mousedown', () => { holdTimer = setTimeout(() => { window.location.href='admin.html'; }, 10000); });
+    document.addEventListener('mouseup', () => { clearTimeout(holdTimer); });
+
+    function showToast(msg) {
+        let t = document.getElementById("toast");
+        t.innerText = msg; t.style.display = "block";
+        setTimeout(() => t.style.display = "none", 3000);
+    }
+
+    function initUser() {
+        if (!userPhone) {
+            showToast("Session expired. Please Login.");
+            setTimeout(() => location.href = 'index.html', 2000);
+            return;
+        }
+        db.ref('users/' + userPhone).on('value', (snapshot) => {
+            const userData = snapshot.val();
+            if (userData) {
+                const balance = parseFloat(userData.balance || 0).toFixed(2);
+                document.getElementById("balDisplay").innerText = "₹" + balance;
+                if (userData.uid) {
+                    document.getElementById("uid").value = userData.uid;
+                    loadHistory(userData.uid);
+                }
+            }
+        });
+    }
+
+    function loadHistory(currentUid) {
+        const list = document.getElementById("historyList");
+        // Withdrawals node se UID ke basis par data lana
+        db.ref('withdrawals').orderByChild('uid').equalTo(currentUid.toString()).on('value', (snapshot) => {
+            list.innerHTML = "";
+            const data = snapshot.val();
+            if (!data) {
+                list.innerHTML = "<p style='color:#64748b; font-size:13px; text-align:center;'>No history found</p>";
+                return;
+            }
+            // Latest requests ko upar dikhane ke liye reverse logic
+            const items = Object.values(data).reverse();
+            items.forEach(item => {
+                const statusClass = item.status ? item.status.toLowerCase() : "pending";
+                list.innerHTML += `
+                    <div class="item">
+                        <div class="item-top">
+                            <span class="amt">₹${item.amount}</span>
+                            <span class="status ${statusClass}">${item.status || 'Pending'}</span>
+                        </div>
+                        <div class="details">UPI: ${item.upi}</div>
+                        <div class="details" style="font-size:10px; margin-top:5px;">Time: ${item.timestamp}</div>
+                    </div>`;
+            });
+        });
+    }
+
+    async function withdraw() {
+        const name = document.getElementById("name").value.trim();
+        const upi = document.getElementById("upi").value.trim();
+        const upi2 = document.getElementById("upi2").value.trim();
+        const amount = parseInt(document.getElementById("amount").value);
+        const uid = document.getElementById("uid").value;
+        const btn = document.getElementById("btn");
+        const currentBalance = parseFloat(document.getElementById("balDisplay").innerText.replace('₹', ''));
+
+        if (!name || !upi || !amount || !uid) { showToast("Please fill all fields"); return; }
+        if (upi !== upi2) { showToast("UPI ID does not match"); return; }
+        if (amount < 200) { showToast("Minimum withdrawal ₹200"); return; }
+        if (amount > currentBalance) { showToast("Insufficient Balance!"); return; }
+
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+
+        try {
+            const timestamp = new Date().toLocaleString();
+            // Firebase mein 'withdrawals' node mein naya data push karna
+            const withdrawRef = db.ref('withdrawals').push();
+            await withdrawRef.set({
+                name,
+                upi,
+                amount,
+                uid: uid.toString(),
+                status: "Pending",
+                timestamp: timestamp,
+                phone: userPhone
+            });
+
+            // Balance update (User ke account se paise katna)
+            const newBalance = currentBalance - amount;
+            await db.ref('users/' + userPhone).update({ balance: newBalance });
+
+            showToast("Withdrawal Requested Successfully!");
+            document.getElementById("amount").value = "";
+            document.getElementById("upi").value = "";
+            document.getElementById("upi2").value = "";
+        } catch (e) {
+            showToast("Request Failed. Try again.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Submit Withdrawal";
+        }
+    }
+
+    window.onload = initUser;
+</script>
+</body>
+</html>

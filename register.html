@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - User Database</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        
+        /* Updated Header with Back Button Layout */
+        .header { 
+            background: #1e3a8a; 
+            color: white; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative;
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            font-weight: bold; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .back-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.25); }
+
+        .container { max-width: 600px; margin: auto; }
+        .id-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; border-left: 6px solid #fbbf24; }
+        .uid-tag { position: absolute; top: 12px; right: 12px; background: #fbbf24; color: #0f172a; padding: 3px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+        .label { color: #64748b; font-size: 11px; text-transform: uppercase; }
+        .val { display: block; font-size: 15px; font-weight: 600; margin-bottom: 5px; color: #1e293b; }
+        .pass { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="admin.html" class="back-btn">⬅ Back</a>
+    User Database Manager 📋
+</div>
+
+<div class="container" id="listContainer">
+    <div style="text-align:center;">Loading Users...</div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
+        authDomain: "admin222-a87bb.firebaseapp.com",
+        projectId: "admin222-a87bb",
+        databaseURL: "https://admin222-a87bb-default-rtdb.firebaseio.com",
+        appId: "1:125393999260:web:be03947a943f50cb0be459"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    onValue(ref(db, 'users'), (snap) => {
+        const container = document.getElementById('listContainer');
+        container.innerHTML = "";
+        const data = snap.val();
+        
+        if(!data) {
+            container.innerHTML = "<p style='text-align:center;'>No Users Found</p>";
+            return;
+        }
+
+        for(let key in data) {
+            const user = data[key];
+            container.innerHTML += `
+                <div class="id-card">
+                    <div class="uid-tag">#${user.uid}</div>
+                    <span class="label">Name</span>
+                    <span class="val">${user.name}</span>
+                    <span class="label">Phone / ID</span>
+                    <span class="val">${user.number}</span>
+                    <span class="label">Password</span>
+                    <span class="val pass">${user.password}</span>
+                    <span class="label">Wallet Balance</span>
+                    <span class="val" style="color:#10b981;">₹${user.balance}</span>
+                </div>
+            `;
+        }
+    });
+</script>
+</body>
+</html>
