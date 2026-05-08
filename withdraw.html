@@ -3,40 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>cash buzz</title>
-    <!-- Firebase SDKs (Compatibility Version) -->
+    <title>Cash Buzz - Premium</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Segoe UI', Arial; background: radial-gradient(circle at top,#1e293b,#020617); color: white; min-height: 100vh; user-select: none; }
-        .header { padding: 18px; display: flex; justify-content: space-between; align-items: center; }
-        .back { background: rgba(255,255,255,0.08); padding: 8px 14px; border-radius: 12px; backdrop-filter: blur(6px); cursor: pointer; }
-        .balance { font-weight: bold; font-size: 16px; color: #10b981; }
-        .wrapper { padding: 15px; display: flex; justify-content: center; }
-        .card { width: 100%; max-width: 380px; background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border-radius: 20px; padding: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.08); }
-        .title { font-size: 20px; font-weight: 600; margin-bottom: 18px; text-align: center; }
-        .input-group { margin-bottom: 14px; }
-        label { font-size: 12px; color: #94a3b8; margin-left: 5px; }
-        input { width: 100%; padding: 14px; margin-top: 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none; }
-        input:focus { border-color: #3b82f6; }
-        input:disabled { opacity: 0.6; cursor: not-allowed; }
-        button { width: 100%; padding: 15px; margin-top: 10px; border-radius: 14px; border: none; background: linear-gradient(90deg,#3b82f6,#6366f1); color: white; font-weight: bold; font-size: 15px; cursor: pointer; }
-        button:disabled { opacity: 0.5; }
-        .history { max-width: 380px; margin: 25px auto; padding: 0 15px; }
-        .item { background: rgba(255,255,255,0.05); padding: 15px; margin-top: 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .amt { font-weight: bold; font-size: 18px; }
-        .status { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
-        .pending { background: #f59e0b; color: #000; }
-        .completed { background: #10b981; color: #fff; }
-        .rejected { background: #ef4444; color: #fff; }
-        .details { font-size: 12px; color: #94a3b8; }
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 12px 25px; border-radius: 50px; display: none; z-index: 10000; font-weight: bold; }
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --glass-bg: rgba(255, 255, 255, 0.07);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
+            background: #0f172a;
+            background-image: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15) 0, transparent 50%),
+                              radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.15) 0, transparent 50%);
+            color: white; 
+            min-height: 100vh; 
+            user-select: none;
+        }
+
+        .header { 
+            padding: 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .back { 
+            background: var(--glass-bg); 
+            padding: 10px 16px; 
+            border-radius: 14px; 
+            border: 1px solid var(--glass-border);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer; 
+            transition: 0.3s;
+        }
+        .back:active { transform: scale(0.95); }
+
+        .balance { 
+            font-weight: 700; 
+            font-size: 18px; 
+            color: var(--success);
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .wrapper { padding: 20px; display: flex; justify-content: center; }
+
+        .card { 
+            width: 100%; 
+            max-width: 400px; 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(25px); 
+            border-radius: 28px; 
+            padding: 28px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+            border: 1px solid var(--glass-border); 
+        }
+
+        .title { 
+            font-size: 22px; 
+            font-weight: 700; 
+            margin-bottom: 24px; 
+            text-align: center;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .input-group { margin-bottom: 18px; }
+
+        label { 
+            font-size: 13px; 
+            color: #94a3b8; 
+            margin-bottom: 8px;
+            display: block;
+            margin-left: 4px;
+        }
+
+        input { 
+            width: 100%; 
+            padding: 16px; 
+            border-radius: 16px; 
+            border: 1px solid var(--glass-border); 
+            background: rgba(0, 0, 0, 0.2); 
+            color: white; 
+            font-size: 15px; 
+            outline: none; 
+            transition: 0.3s;
+        }
+        input:focus { 
+            border-color: #6366f1; 
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+        input:disabled { opacity: 0.5; }
+
+        button { 
+            width: 100%; 
+            padding: 16px; 
+            margin-top: 10px; 
+            border-radius: 18px; 
+            border: none; 
+            background: var(--primary-gradient); 
+            color: white; 
+            font-weight: 700; 
+            font-size: 16px; 
+            cursor: pointer; 
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
+            transition: 0.3s;
+        }
+        button:active { transform: scale(0.98); opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .history { max-width: 400px; margin: 10px auto 40px; padding: 0 20px; }
+        .history h3 { font-size: 18px; margin-bottom: 15px; color: #cbd5e1; }
+
+        .item { 
+            background: var(--glass-bg); 
+            padding: 18px; 
+            margin-bottom: 15px; 
+            border-radius: 20px; 
+            border: 1px solid var(--glass-border);
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .amt { font-weight: 800; font-size: 20px; color: #fff; }
+
+        .status { 
+            padding: 6px 12px; 
+            border-radius: 10px; 
+            font-size: 11px; 
+            font-weight: 700; 
+            letter-spacing: 0.5px;
+        }
+        .pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .completed { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+        .details { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .toast { 
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            background: #fff; color: #000; padding: 14px 28px; 
+            border-radius: 20px; display: none; z-index: 10000; 
+            font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 30px; opacity: 1; } }
     </style>
 </head>
-<body>
 
+<body>
 <div id="toast" class="toast"></div>
 
 <div class="header">
@@ -46,14 +174,14 @@
 
 <div class="wrapper">
     <div class="card">
-        <div class="title">Withdrawal Request</div>
+        <div class="title">Withdraw Funds</div>
         <div class="input-group">
             <label>Full Name</label>
-            <input id="name" placeholder="Name as per Bank">
+            <input id="name" placeholder="Enter bank name">
         </div>
         <div class="input-group">
             <label>UPI ID</label>
-            <input id="upi" placeholder="example@ybl">
+            <input id="upi" placeholder="example@upi">
         </div>
         <div class="input-group">
             <label>Confirm UPI ID</label>
@@ -61,25 +189,25 @@
         </div>
         <div class="input-group">
             <label>Amount (Min ₹200)</label>
-            <input type="number" id="amount" placeholder="Min 200">
+            <input type="number" id="amount" placeholder="0.00">
         </div>
         <div class="input-group">
             <label>User UID</label>
-            <input id="uid" placeholder="Fetching UID..." readonly disabled>
+            <input id="uid" placeholder="Fetching..." readonly disabled>
         </div>
         <button id="btn" onclick="withdraw()">Submit Withdrawal</button>
     </div>
 </div>
 
 <div class="history">
-    <h3>Withdraw History</h3>
+    <h3>Transaction History</h3>
     <div id="historyList">
-        <p style="text-align:center; color:#64748b; margin-top:20px;">Fetching records...</p>
+        <p style="text-align:center; color:#64748b; margin-top:20px;">Loading transactions...</p>
     </div>
 </div>
 
 <script>
-    // Firebase Config
+    // Config same as provided
     const firebaseConfig = {
         apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
         authDomain: "admin222-a87bb.firebaseapp.com",
@@ -91,13 +219,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const userPhone = localStorage.getItem('user_phone');
-
-    // --- SECRET ADMIN HOLD (10 SECONDS) ---
-    let holdTimer;
-    document.addEventListener('touchstart', () => { holdTimer = setTimeout(() => { window.location.href='admin.html'; }, 10000); });
-    document.addEventListener('touchend', () => { clearTimeout(holdTimer); });
-    document.addEventListener('mousedown', () => { holdTimer = setTimeout(() => { window.location.href='admin.html'; }, 10000); });
-    document.addEventListener('mouseup', () => { clearTimeout(holdTimer); });
 
     function showToast(msg) {
         let t = document.getElementById("toast");
@@ -126,26 +247,25 @@
 
     function loadHistory(currentUid) {
         const list = document.getElementById("historyList");
-        // Withdrawals node se UID ke basis par data lana
         db.ref('withdrawals').orderByChild('uid').equalTo(currentUid.toString()).on('value', (snapshot) => {
             list.innerHTML = "";
             const data = snapshot.val();
             if (!data) {
-                list.innerHTML = "<p style='color:#64748b; font-size:13px; text-align:center;'>No history found</p>";
+                list.innerHTML = "<p style='color:#64748b; font-size:13px; text-align:center; margin-top:20px;'>No transactions yet</p>";
                 return;
             }
-            // Latest requests ko upar dikhane ke liye reverse logic
             const items = Object.values(data).reverse();
             items.forEach(item => {
-                const statusClass = item.status ? item.status.toLowerCase() : "pending";
+                const statusStr = item.status || 'Pending';
+                const statusClass = statusStr.toLowerCase();
                 list.innerHTML += `
                     <div class="item">
                         <div class="item-top">
                             <span class="amt">₹${item.amount}</span>
-                            <span class="status ${statusClass}">${item.status || 'Pending'}</span>
+                            <span class="status ${statusClass}">${statusStr}</span>
                         </div>
                         <div class="details">UPI: ${item.upi}</div>
-                        <div class="details" style="font-size:10px; margin-top:5px;">Time: ${item.timestamp}</div>
+                        <div class="details" style="font-size:11px; color:#64748b; margin-top:8px;">${item.timestamp}</div>
                     </div>`;
             });
         });
@@ -170,28 +290,21 @@
 
         try {
             const timestamp = new Date().toLocaleString();
-            // Firebase mein 'withdrawals' node mein naya data push karna
             const withdrawRef = db.ref('withdrawals').push();
             await withdrawRef.set({
-                name,
-                upi,
-                amount,
-                uid: uid.toString(),
-                status: "Pending",
-                timestamp: timestamp,
-                phone: userPhone
+                name, upi, amount, uid: uid.toString(),
+                status: "Pending", timestamp: timestamp, phone: userPhone
             });
 
-            // Balance update (User ke account se paise katna)
             const newBalance = currentBalance - amount;
             await db.ref('users/' + userPhone).update({ balance: newBalance });
 
-            showToast("Withdrawal Requested Successfully!");
+            showToast("Success! Request sent.");
             document.getElementById("amount").value = "";
             document.getElementById("upi").value = "";
             document.getElementById("upi2").value = "";
         } catch (e) {
-            showToast("Request Failed. Try again.");
+            showToast("Request Failed.");
         } finally {
             btn.disabled = false;
             btn.innerText = "Submit Withdrawal";
