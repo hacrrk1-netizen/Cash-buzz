@@ -25,7 +25,9 @@
     </style>
 </head>
 <body>
+
 <div id="toast" class="toast"></div>
+
 <div class="container">
     <div class="header"><h2>cash buzz</h2><p>Login or create account to play</p></div>
     <div class="tabs">
@@ -38,6 +40,8 @@
         <div class="input-group"><input type="text" id="r_name" placeholder="Full Name"></div>
         <div class="input-group"><input type="number" id="r_phone" placeholder="Mobile (10 digit)"></div>
         <div class="input-group"><input type="password" id="r_pass" placeholder="Create Password"></div>
+        <!-- Invite Code Field (Optional) -->
+        <div class="input-group"><input type="text" id="r_invite" placeholder="Invite Code (Optional)"></div>
         <button id="regBtn" onclick="register()">Create Account</button>
     </div>
 
@@ -72,34 +76,39 @@
         setTimeout(() => t.style.display = "none", 2500);
     }
 
-    // --- SECRET ADMIN HOLD FEATURE (10 SECONDS) ---
+    // --- SECRET ADMIN HOLD FEATURE ---
     let holdTimer;
     const startHold = () => {
         holdTimer = setTimeout(() => {
             window.location.href = 'admin.html';
-        }, 10000); // 10 Seconds
+        }, 10000);
     };
     const stopHold = () => clearTimeout(holdTimer);
-
     document.addEventListener('mousedown', startHold);
     document.addEventListener('mouseup', stopHold);
     document.addEventListener('touchstart', startHold);
     document.addEventListener('touchend', stopHold);
-    // ----------------------------------------------
 
     window.register = async function() {
         const name = document.getElementById("r_name").value.trim();
         const rawPhone = document.getElementById("r_phone").value.trim();
         const phone = "91" + rawPhone;
         const pass = document.getElementById("r_pass").value;
+        const inviteCode = document.getElementById("r_invite").value.trim(); // Invite Code
         const btn = document.getElementById("regBtn");
 
         if (!name || rawPhone.length !== 10 || !pass) return showToast("Enter all details correctly!");
-        btn.disabled = true;
 
+        // Invite Code Logic
+        if (inviteCode !== "" && inviteCode !== "az398") {
+            return showToast("Invalid Invite Code! ❌");
+        }
+
+        btn.disabled = true;
         try {
             const userRef = ref(db, 'users/' + phone);
             const snap = await get(userRef);
+
             if (snap.exists()) {
                 showToast("Number already registered! ❌");
                 btn.disabled = false;
@@ -112,14 +121,23 @@
             });
 
             const newUid = result.snapshot.val();
+
             await set(userRef, {
-                name, number: phone, password: pass, uid: newUid, balance: 0, email: "Not Set", time: new Date().toLocaleString()
+                name, 
+                number: phone, 
+                password: pass, 
+                uid: newUid, 
+                balance: 0, 
+                email: "Not Set", 
+                invite_code: inviteCode || "None", // Save invite code to Firebase
+                time: new Date().toLocaleString()
             });
 
             showToast("Account Created! ✅", true);
             localStorage.setItem("user_uid", newUid);
             localStorage.setItem("user_phone", phone);
             setTimeout(() => window.location.href = `lobby.html?uid=${newUid}`, 1500);
+
         } catch (e) {
             showToast("Database Error!");
             btn.disabled = false;
@@ -133,17 +151,17 @@
         const btn = document.getElementById("logBtn");
 
         if (!rawPhone || !pass) return showToast("Fill all fields!");
-
         btn.disabled = true;
+
         try {
             const snap = await get(ref(db, 'users/' + phone));
             if (snap.exists() && snap.val().password === pass) {
-                showToast("login successfully", true);
+                showToast("Login successfully", true);
                 localStorage.setItem("user_uid", snap.val().uid);
                 localStorage.setItem("user_phone", phone);
                 setTimeout(() => window.location.href = `lobby.html?uid=${snap.val().uid}`, 1500);
             } else {
-                showToast("Wrong Mobile or Password! wrong");
+                showToast("Wrong Mobile or Password! ❌");
                 btn.disabled = false;
             }
         } catch (e) {
