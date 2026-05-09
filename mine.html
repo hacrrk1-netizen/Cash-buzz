@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>cash buzz</title>
+    <title>CASH BUZZ</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
@@ -118,6 +118,27 @@
         }
         @keyframes flipIn { from { transform: rotateY(90deg); opacity: 0; } to { transform: rotateY(0); opacity: 1; } }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        
+        .win-popup { 
+            position: absolute; 
+            top: 40%; 
+            left: 50%; 
+            transform: translate(-50%, -50%) scale(0); 
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white; 
+            padding: 25px 45px; 
+            border-radius: 20px; 
+            font-weight: 900; 
+            font-size: 28px; 
+            display: none; 
+            z-index: 100; 
+            text-align: center;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .win-popup.show { display: block; transform: translate(-50%, -50%) scale(1); }
+        .win-popup span { font-size: 16px; display: block; opacity: 0.9; margin-bottom: 5px; }
         .grid-item.disabled { pointer-events: none; }
         .dot { width: 6px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 50%; }
         .mid-actions { display: flex; justify-content: space-between; padding: 0 20px 15px; gap: 15px; }
@@ -149,7 +170,6 @@
         .modal-content { background: #1e293b; border-radius: 25px 25px 0 0; padding: 25px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .mine-opt { padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: center; cursor: pointer; font-weight: 700; border: 1px solid transparent; }
         .mine-opt.active { border-color: var(--primary-blue); background: rgba(59, 130, 246, 0.2); }
-        .win-popup { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: var(--success-green); color: white; padding: 15px 30px; border-radius: 50px; font-weight: 900; font-size: 20px; display: none; z-index: 50; }
         .footer { padding: 15px 25px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; background: #0b0f1a; letter-spacing: 1px; }
     </style>
 </head>
@@ -160,7 +180,7 @@
             <a href="lobby.html" class="back-btn">‹</a>
             <div class="user-info">
                 <span class="uid-label">PLAYER ID</span>
-                <span class="uid-value" id="userUid">Loading...</span>
+                <span class="uid-value" id="userUid">51629</span>
             </div>
         </div>
         <div class="balance-chip">
@@ -170,7 +190,10 @@
         </div>
     </div>
     <div class="game-title">MINES PRO</div>
-    <div id="winPopup" class="win-popup">+₹0.00</div>
+    <div id="winPopup" class="win-popup">
+        <span>YOU WON</span>
+        <div id="winVal">₹0.00</div>
+    </div>
     <div class="grid-container" id="grid"></div>
     <div class="mid-actions">
         <button class="btn-secondary" onclick="resetGame()">CLEAR BOARD</button>
@@ -202,6 +225,7 @@
         <span>VERIFY</span>
     </div>
 </div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyAFeBWLykjlE25vzKFRRJjAw6f1gylplLI",
@@ -210,7 +234,6 @@
         projectId: "admin222-a87bb",
         appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const userPhone = localStorage.getItem('user_phone');
@@ -218,52 +241,28 @@
     let currentBalance = 0;
     let selectedMines = 3;
     let gameActive = false;
-    let minePositions = [];
     let revealedCount = 0;
     let currentWinAmount = 0;
-    let totalRoundsPlayed = 0;
+    let currentRoundIndex = 0;
+    let minePositions = []; 
+    const roundPattern = [5, 3, 1, 7, 5, 4, 5, 3, 7, 5, 3, 5, 5, 2, 3, 5, 10, 7, 5, 2];
 
     if (!userPhone) window.location.href = "index.html";
 
+    // Initial listener for balance
     db.ref('users/' + userPhone).on('value', (snapshot) => {
         const userData = snapshot.val();
         if (userData) {
             currentBalance = parseFloat(userData.balance || 0);
             document.getElementById('userBalance').innerText = currentBalance.toFixed(2);
-            if(userData.uid) document.getElementById('userUid').innerText = userData.uid;
+            document.getElementById('userUid').innerText = userData.uid || "51629";
             
-            // Check balance limit when NOT in game
-            if (!gameActive && currentBalance >= 200) {
+            // Check if balance is over 200 ONLY when no game is active
+            if (currentBalance >= 200 && !gameActive) {
                 window.location.href = "lobby.html";
             }
         }
     });
-
-    function toggleModal() {
-        if(gameActive) return;
-        const modal = document.getElementById('mineModal');
-        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
-    }
-
-    function setMines(count) {
-        selectedMines = count;
-        document.querySelectorAll('.mine-opt').forEach(opt => {
-            opt.classList.remove('active');
-            if(parseInt(opt.innerText) === count) opt.classList.add('active');
-        });
-        document.getElementById('mineSelectTrigger').innerText = count + " MINES";
-        toggleModal();
-        resetGame();
-    }
-
-    function adjustBet(amount) {
-        if(gameActive) return;
-        const input = document.getElementById('betAmount');
-        let newVal = parseInt(input.value) + amount;
-        if(newVal < 10) newVal = 10;
-        if(newVal > currentBalance) newVal = Math.floor(currentBalance / 10) * 10;
-        input.value = newVal || 10;
-    }
 
     function generateGrid() {
         const grid = document.getElementById('grid');
@@ -277,67 +276,47 @@
         }
     }
 
-    function handleBetClick() {
-        if (!gameActive) startGame(); else cashOut();
-    }
-
     function startGame() {
         const betAmount = parseInt(document.getElementById('betAmount').value);
         if(currentBalance < betAmount) return alert("Low Balance!");
         
-        db.ref('users/' + userPhone).update({ balance: currentBalance - betAmount });
+        db.ref('users/' + userPhone).update({ balance: (currentBalance - betAmount).toFixed(2) });
         
+        minePositions = [];
+        while(minePositions.length < selectedMines) {
+            let r = Math.floor(Math.random() * 25);
+            if(!minePositions.includes(r)) minePositions.push(r);
+        }
+
         gameActive = true;
         revealedCount = 0;
         currentWinAmount = 0;
-        totalRoundsPlayed++;
-
         const btn = document.getElementById('mainBetBtn');
         btn.innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹0.00</span>`;
         btn.classList.add('cashout');
-        document.getElementById('totalWin').innerText = "0.00 INR";
-        
-        minePositions = [];
         generateGrid();
     }
 
     function revealBox(index, element) {
         if(!gameActive || element.classList.contains('disabled')) return;
-
-        let shouldMine = false;
-        if (selectedMines === 3) {
-            if (totalRoundsPlayed === 1 && revealedCount === 5) shouldMine = true;
-            else if (totalRoundsPlayed === 2 && revealedCount === 3) shouldMine = true;
-            else if (totalRoundsPlayed >= 3 && totalRoundsPlayed <= 5 && revealedCount === 6) shouldMine = true;
-            else {
-                if (minePositions.length === 0) setupRandomMines(index);
-                if (minePositions.includes(index)) shouldMine = true;
-            }
-        } else {
-            if (minePositions.length === 0) setupRandomMines(index);
-            if (minePositions.includes(index)) shouldMine = true;
-        }
-
-        if(shouldMine) {
-            if(!minePositions.includes(index)) minePositions.push(index); 
-            element.classList.add('revealed-mine');
-            element.innerHTML = '💣';
+        
+        let safeLimit = roundPattern[currentRoundIndex];
+        
+        if (revealedCount >= safeLimit) {
+            minePositions[0] = index; 
             gameOver(false);
         } else {
+            if(minePositions.includes(index)) {
+                let newPos;
+                do { newPos = Math.floor(Math.random() * 25); } 
+                while (minePositions.includes(newPos) || index === newPos);
+                minePositions[minePositions.indexOf(index)] = newPos;
+            }
             element.classList.add('revealed-star');
             element.innerHTML = '⭐';
             element.classList.add('disabled');
             revealedCount++;
             updateWinDisplay();
-        }
-    }
-
-    function setupRandomMines(firstClick) {
-        while(minePositions.length < selectedMines) {
-            let r = Math.floor(Math.random() * 25);
-            if(r !== firstClick && !minePositions.includes(r)) {
-                minePositions.push(r);
-            }
         }
     }
 
@@ -350,50 +329,63 @@
         currentWinAmount = parseFloat((bet * multiplier * 0.98).toFixed(2));
         document.getElementById('totalWin').innerText = currentWinAmount.toFixed(2) + " INR";
         document.getElementById('mainBetBtn').innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹${currentWinAmount.toFixed(2)}</span>`;
-
-        // --- AUTO CASHOUT + REDIRECT LOGIC ---
-        // Agar Wallet + Current Win >= 200 ho jaye
+        
+        // Auto cashout if profit + balance exceeds 200
         if ((currentBalance + currentWinAmount) >= 200) {
-            setTimeout(() => { cashOut(); }, 500);
+            setTimeout(cashOut, 300);
         }
     }
 
     function cashOut() {
         if(!gameActive || revealedCount === 0) return;
+        const finalWin = currentWinAmount;
+        const newBalance = (currentBalance + finalWin).toFixed(2);
         
-        let finalWin = currentWinAmount;
-        db.ref('users/' + userPhone).update({ balance: currentBalance + finalWin }).then(() => {
-            if ((currentBalance + finalWin) >= 200) {
-                window.location.href = "lobby.html";
-            }
+        gameActive = false; // Stop game immediately
+        
+        db.ref('users/' + userPhone).update({ balance: newBalance }).then(() => {
+            const popup = document.getElementById('winPopup');
+            document.getElementById('winVal').innerText = "₹" + finalWin.toFixed(2);
+            popup.classList.add('show');
+            
+            gameOver(true);
+            
+            setTimeout(() => {
+                popup.classList.remove('show');
+                // Force redirect after database update and popup
+                if (parseFloat(newBalance) >= 200) {
+                    window.location.href = "lobby.html";
+                } else {
+                    resetGame();
+                }
+            }, 2000);
         });
-
-        const popup = document.getElementById('winPopup');
-        popup.innerText = "+₹" + finalWin.toFixed(2);
-        popup.style.display = 'block';
-        setTimeout(() => popup.style.display = 'none', 2000);
-        gameOver(true);
     }
 
     function gameOver(won) {
         gameActive = false;
+        currentRoundIndex = (currentRoundIndex + 1) % 20;
+        
         const btn = document.getElementById('mainBetBtn');
         btn.innerHTML = `<span>PLACE BET</span>`;
         btn.classList.remove('cashout');
         
-        if (minePositions.length < selectedMines) {
-            while(minePositions.length < selectedMines) {
-                let r = Math.floor(Math.random() * 25);
-                if(!minePositions.includes(r)) minePositions.push(r);
-            }
-        }
-
         const items = document.querySelectorAll('.grid-item');
-        minePositions.forEach((pos) => {
-            items[pos].innerHTML = '💣';
-            if(!won) items[pos].classList.add('revealed-mine');
+        minePositions.forEach(pos => {
+            const mineItem = items[pos];
+            if (mineItem) {
+                mineItem.innerHTML = '💣';
+                if(!won && mineItem.classList.contains('dot')) {
+                     mineItem.classList.add('revealed-mine');
+                } else {
+                    mineItem.style.background = "rgba(239, 68, 68, 0.5)";
+                    mineItem.style.borderRadius = "12px";
+                }
+            }
         });
+
         items.forEach(item => item.classList.add('disabled'));
+        if(!won) setTimeout(resetGame, 2500);
     }
 
     function resetGame() {
@@ -402,7 +394,26 @@
         generateGrid();
     }
 
-    generateGrid();
+    function toggleModal() { if(!gameActive) { const m = document.getElementById('mineModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; } }
+    function setMines(count) {
+        selectedMines = count;
+        document.querySelectorAll('.mine-opt').forEach(opt => {
+            opt.classList.remove('active');
+            if(parseInt(opt.innerText) === count) opt.classList.add('active');
+        });
+        document.getElementById('mineSelectTrigger').innerText = count + " MINES";
+        toggleModal();
+        resetGame();
+    }
+    function adjustBet(amount) {
+        if(gameActive) return;
+        const input = document.getElementById('betAmount');
+        let newVal = parseInt(input.value) + amount;
+        if(newVal < 10) newVal = 10;
+        input.value = newVal;
+    }
+    function handleBetClick() { if (!gameActive) startGame(); else cashOut(); }
+    window.onload = generateGrid;
 </script>
 </body>
-</html>
+    </html>
