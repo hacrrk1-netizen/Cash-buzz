@@ -44,7 +44,32 @@
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             z-index: 10;
+            position: relative;
         }
+
+        /* --- Custom Error Popup Style --- */
+        #errorPopup {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50px);
+            background: #ef4444;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 100;
+            transition: all 0.3s ease;
+            opacity: 0;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+        #errorPopup.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
         .back-btn {
             font-size: 24px;
             text-decoration: none;
@@ -174,7 +199,11 @@
     </style>
 </head>
 <body>
+
 <div class="game-container">
+    <!-- Top Error Alert -->
+    <div id="errorPopup">Low Balance!</div>
+
     <div class="top-nav">
         <div style="display: flex; align-items: center;">
             <a href="lobby.html" class="back-btn">‹</a>
@@ -189,16 +218,21 @@
             <a href="deposit.html" class="add-funds">+</a>
         </div>
     </div>
+
     <div class="game-title">MINES PRO</div>
+
     <div id="winPopup" class="win-popup">
         <span>YOU WON</span>
         <div id="winVal">₹0.00</div>
     </div>
+
     <div class="grid-container" id="grid"></div>
+
     <div class="mid-actions">
         <button class="btn-secondary" onclick="resetGame()">CLEAR BOARD</button>
         <button class="btn-secondary" id="mineSelectTrigger" onclick="toggleModal()">3 MINES</button>
     </div>
+
     <div class="betting-panel">
         <div class="bet-input-box">
             <button class="btn-step" onclick="adjustBet(-10)">−</button>
@@ -209,6 +243,7 @@
             <span>PLACE BET</span>
         </button>
     </div>
+
     <div class="modal-overlay" id="mineModal" onclick="toggleModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="mine-opt" onclick="setMines(1)">1</div>
@@ -219,6 +254,7 @@
             <div class="mine-opt" onclick="setMines(24)">24</div>
         </div>
     </div>
+
     <div class="footer">
         <span>PROVABLY FAIR</span>
         <span id="totalWin" style="color: #4ade80; font-weight: 700;">0.00 INR</span>
@@ -234,6 +270,7 @@
         projectId: "admin222-a87bb",
         appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const userPhone = localStorage.getItem('user_phone');
@@ -245,11 +282,21 @@
     let currentWinAmount = 0;
     let currentRoundIndex = 0;
     let minePositions = []; 
+
     const roundPattern = [5, 3, 1, 7, 5, 4, 5, 3, 7, 5, 3, 5, 5, 2, 3, 5, 10, 7, 5, 2];
 
     if (!userPhone) window.location.href = "index.html";
 
-    // Initial listener for balance
+    // Show Custom Error Function
+    function showError(msg) {
+        const errorDiv = document.getElementById('errorPopup');
+        errorDiv.innerText = msg;
+        errorDiv.classList.add('show');
+        setTimeout(() => {
+            errorDiv.classList.remove('show');
+        }, 3000);
+    }
+
     db.ref('users/' + userPhone).on('value', (snapshot) => {
         const userData = snapshot.val();
         if (userData) {
@@ -257,7 +304,6 @@
             document.getElementById('userBalance').innerText = currentBalance.toFixed(2);
             document.getElementById('userUid').innerText = userData.uid || "51629";
             
-            // Check if balance is over 200 ONLY when no game is active
             if (currentBalance >= 200 && !gameActive) {
                 window.location.href = "lobby.html";
             }
@@ -278,7 +324,11 @@
 
     function startGame() {
         const betAmount = parseInt(document.getElementById('betAmount').value);
-        if(currentBalance < betAmount) return alert("Low Balance!");
+        
+        if(currentBalance < betAmount) {
+            showError("Low Balance!"); // Replacing alert
+            return;
+        }
         
         db.ref('users/' + userPhone).update({ balance: (currentBalance - betAmount).toFixed(2) });
         
@@ -330,7 +380,6 @@
         document.getElementById('totalWin').innerText = currentWinAmount.toFixed(2) + " INR";
         document.getElementById('mainBetBtn').innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹${currentWinAmount.toFixed(2)}</span>`;
         
-        // Auto cashout if profit + balance exceeds 200
         if ((currentBalance + currentWinAmount) >= 200) {
             setTimeout(cashOut, 300);
         }
@@ -341,7 +390,7 @@
         const finalWin = currentWinAmount;
         const newBalance = (currentBalance + finalWin).toFixed(2);
         
-        gameActive = false; // Stop game immediately
+        gameActive = false; 
         
         db.ref('users/' + userPhone).update({ balance: newBalance }).then(() => {
             const popup = document.getElementById('winPopup');
@@ -352,7 +401,6 @@
             
             setTimeout(() => {
                 popup.classList.remove('show');
-                // Force redirect after database update and popup
                 if (parseFloat(newBalance) >= 200) {
                     window.location.href = "lobby.html";
                 } else {
@@ -383,7 +431,6 @@
                 }
             }
         });
-
         items.forEach(item => item.classList.add('disabled'));
         if(!won) setTimeout(resetGame, 2500);
     }
@@ -395,6 +442,7 @@
     }
 
     function toggleModal() { if(!gameActive) { const m = document.getElementById('mineModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; } }
+
     function setMines(count) {
         selectedMines = count;
         document.querySelectorAll('.mine-opt').forEach(opt => {
@@ -405,6 +453,7 @@
         toggleModal();
         resetGame();
     }
+
     function adjustBet(amount) {
         if(gameActive) return;
         const input = document.getElementById('betAmount');
@@ -412,7 +461,9 @@
         if(newVal < 10) newVal = 10;
         input.value = newVal;
     }
+
     function handleBetClick() { if (!gameActive) startGame(); else cashOut(); }
+
     window.onload = generateGrid;
 </script>
 </body>
