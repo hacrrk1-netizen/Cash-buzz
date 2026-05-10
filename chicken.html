@@ -23,7 +23,6 @@
             min-height: 100vh;
             display: flex; 
             justify-content: center;
-            /* Scroll enable karne ke liye changes */
             overflow-y: auto; 
             -webkit-overflow-scrolling: touch;
         }
@@ -31,7 +30,7 @@
         .game-container { 
             width: 100%; 
             max-width: 500px; 
-            min-height: 100vh; /* Full height base */
+            min-height: 100vh;
             position: relative; 
             display: flex; 
             flex-direction: column; 
@@ -47,7 +46,7 @@
             backdrop-filter: blur(10px); 
             border-bottom: 1px solid rgba(255,255,255,0.1); 
             z-index: 100;
-            position: sticky; /* Taaki scroll pe header upar rahe */
+            position: sticky; 
             top: 0;
         }
 
@@ -74,7 +73,6 @@
             gap: 8px; 
         }
 
-        /* Viewport height ko adjust kiya taaki scroll space bane */
         .viewport { 
             height: 450px; 
             position: relative; 
@@ -100,7 +98,7 @@
             flex-direction: column; 
             gap: 15px; 
             z-index: 110;
-            margin-top: -20px; /* Thoda overlay effect ke liye */
+            margin-top: -20px;
         }
 
         .bet-input-wrapper { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
@@ -145,7 +143,6 @@
         </div>
         <button id="startBtn" class="main-btn start-btn" onclick="startGame()">Start Adventure</button>
         <button id="cashBtn" class="main-btn cash-btn" onclick="cashOut()">Cash Out</button>
-        <!-- Thoda extra space scroll ke liye -->
         <div style="height: 20px;"></div>
     </div>
 
@@ -174,7 +171,8 @@
     let currentPatternIndex = 0;
     let crashPoint = 0;
 
-    const winLossChart = ['W', 'W', 'L', 'W', 'W', 'L', 'L', 'W', 'W', 'W']; 
+    // Hardcoded 90% Loss Pattern (S: Success/W, L: Loss/Crash)
+    const winLossChart = ['L', 'L', 'L', 'W', 'L', 'L', 'L', 'L', 'L', 'W']; 
     const multipliers = [1.2, 1.6, 2.1, 2.9, 3.8, 5.2, 7.5, 10, 15, 25];
     const LANE_WIDTH = 160; 
     const START_OFFSET = 100;
@@ -225,8 +223,14 @@
         gameActive = true;
         currentLane = 0;
 
+        // Force Loss Logic
         let mode = winLossChart[currentPatternIndex];
-        crashPoint = (mode === 'W') ? 0 : Math.floor(Math.random() * 5) + 1;
+        if(mode === 'L') {
+            // Agar loss mode hai toh 1st, 2nd ya 3rd lane pe hi car thuk jayegi
+            crashPoint = Math.floor(Math.random() * 3) + 1; 
+        } else {
+            crashPoint = 0; // Win mode
+        }
 
         currentPatternIndex = (currentPatternIndex + 1) % winLossChart.length;
         document.getElementById('startBtn').style.display = 'none';
@@ -253,10 +257,13 @@
         let currentWin = betValue * multipliers[currentLane - 1];
 
         let isCrashed = false;
-        if(currentLane <= 5) {
-            if(crashPoint !== 0 && currentLane === crashPoint) isCrashed = true;
-        } else {
-            if(Math.random() < 0.4) isCrashed = true;
+        
+        // Final Security Check
+        if(crashPoint !== 0 && currentLane >= crashPoint) {
+            isCrashed = true;
+        } else if (currentLane > 5) {
+            // Agar galti se upar nikal gaya toh 90% chance crash ka
+            if(Math.random() < 0.9) isCrashed = true;
         }
 
         if(isCrashed) {
