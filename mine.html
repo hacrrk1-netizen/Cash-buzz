@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CASH BUZZ</title>
+    <title>MINES PRO - CASH BUZZ</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
@@ -44,172 +44,64 @@
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             z-index: 10;
-            position: relative;
         }
-
-        /* --- Custom Error Popup Style --- */
         #errorPopup {
             position: absolute;
-            top: 12px;
+            top: 70px;
             left: 50%;
-            transform: translateX(-50%) translateY(-50px);
-            background: #ef4444;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--mine-red);
             color: white;
-            padding: 10px 25px;
-            border-radius: 8px;
+            padding: 8px 20px;
+            border-radius: 20px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             z-index: 100;
             transition: all 0.3s ease;
             opacity: 0;
-            white-space: nowrap;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            pointer-events: none;
         }
-        #errorPopup.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-
-        .back-btn {
-            font-size: 24px;
-            text-decoration: none;
-            color: white;
-            background: var(--glass);
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            margin-right: 10px;
-        }
-        .user-info { display: flex; flex-direction: column; }
-        .uid-label { font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-        .uid-value { font-size: 13px; font-weight: 600; color: #e2e8f0; }
-        .balance-chip {
-            background: #1e293b;
-            padding: 8px 12px;
-            border-radius: 12px;
-            border: 1px solid var(--border-glow);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .add-funds {
-            background: var(--primary-blue);
-            border-radius: 6px;
-            width: 22px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            text-decoration: none;
-            color: white;
-        }
+        #errorPopup.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .back-btn { font-size: 24px; text-decoration: none; color: white; background: var(--glass); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+        .user-info { display: flex; flex-direction: column; margin-left: 10px; }
+        .uid-label { font-size: 9px; color: #94a3b8; letter-spacing: 1px; }
+        .uid-value { font-size: 13px; font-weight: 600; }
+        .balance-chip { background: #1e293b; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border-glow); display: flex; align-items: center; gap: 8px; }
+        .add-funds { background: var(--primary-blue); border-radius: 6px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: bold; text-decoration: none; color: white; }
         .game-title { text-align: center; font-weight: 800; padding: 10px; font-size: 18px; letter-spacing: 6px; color: #60a5fa; }
-        .grid-container {
-            flex: 1;
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            padding: 15px;
-            align-content: flex-start;
-        }
-        .grid-item {
-            aspect-ratio: 1;
-            background: linear-gradient(145deg, #1e3a8a, #172554);
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 24px;
-        }
+        .grid-container { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 15px; align-content: flex-start; }
+        .grid-item { aspect-ratio: 1; background: linear-gradient(145deg, #1e3a8a, #172554); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s ease; font-size: 24px; }
         .grid-item:active { transform: scale(0.92); }
-        .grid-item.revealed-star { 
-            background: var(--star-gold); 
-            box-shadow: 0 0 15px var(--star-gold);
-            border: none;
-            animation: flipIn 0.3s ease-out;
-        }
-        .grid-item.revealed-mine { 
-            background: var(--mine-red); 
-            box-shadow: 0 0 15px var(--mine-red);
-            animation: shake 0.4s both;
-        }
+        .grid-item.revealed-star { background: var(--star-gold); box-shadow: 0 0 15px var(--star-gold); animation: flipIn 0.3s ease-out; border: none; }
+        .grid-item.revealed-mine { background: var(--mine-red); box-shadow: 0 0 15px var(--mine-red); animation: shake 0.4s both; }
         @keyframes flipIn { from { transform: rotateY(90deg); opacity: 0; } to { transform: rotateY(0); opacity: 1; } }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-        
-        .win-popup { 
-            position: absolute; 
-            top: 40%; 
-            left: 50%; 
-            transform: translate(-50%, -50%) scale(0); 
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white; 
-            padding: 25px 45px; 
-            border-radius: 20px; 
-            font-weight: 900; 
-            font-size: 28px; 
-            display: none; 
-            z-index: 100; 
-            text-align: center;
-            box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
-            border: 2px solid rgba(255,255,255,0.2);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } }
+        .win-popup { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0); background: linear-gradient(135deg, #22c55e, #16a34a); padding: 25px 45px; border-radius: 20px; font-weight: 900; font-size: 28px; display: none; z-index: 100; text-align: center; box-shadow: 0 0 30px rgba(34, 197, 94, 0.6); }
         .win-popup.show { display: block; transform: translate(-50%, -50%) scale(1); }
-        .win-popup span { font-size: 16px; display: block; opacity: 0.9; margin-bottom: 5px; }
-        .grid-item.disabled { pointer-events: none; }
-        .dot { width: 6px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 50%; }
-        .mid-actions { display: flex; justify-content: space-between; padding: 0 20px 15px; gap: 15px; }
-        .btn-secondary { flex: 1; background: rgba(30, 41, 59, 0.5); color: white; border: 1px solid #334155; border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
         .betting-panel { background: #111827; padding: 20px 20px 30px; border-radius: 30px 30px 0 0; border-top: 1px solid rgba(96, 165, 250, 0.3); }
         .bet-input-box { background: #0f172a; border: 1px solid #334155; border-radius: 16px; display: flex; align-items: center; padding: 8px; margin-bottom: 15px; }
-        .btn-step { background: #1e293b; border: none; color: white; width: 45px; height: 45px; border-radius: 12px; font-size: 20px; cursor: pointer; }
+        .btn-step { background: #1e293b; border: none; color: white; width: 45px; height: 45px; border-radius: 12px; font-size: 20px; }
         .bet-display { flex: 1; text-align: center; }
         .bet-display input { background: transparent; border: none; color: white; font-weight: 700; font-size: 22px; width: 100%; text-align: center; outline: none; }
-        .bet-btn {
-            width: 100%;
-            background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
-            border: none;
-            border-radius: 16px;
-            color: white;
-            font-weight: 800;
-            font-size: 18px;
-            height: 65px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .btn-sub-text { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-        .bet-btn.cashout { background: linear-gradient(180deg, #eab308 0%, #a16207 100%); box-shadow: 0 4px 15px rgba(161, 98, 7, 0.4); }
+        .bet-btn { width: 100%; background: linear-gradient(180deg, #22c55e 0%, #15803d 100%); border: none; border-radius: 16px; color: white; font-weight: 800; font-size: 18px; height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .bet-btn.cashout { background: linear-gradient(180deg, #eab308 0%, #a16207 100%); }
         .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 100; justify-content: flex-end; flex-direction: column; }
         .modal-content { background: #1e293b; border-radius: 25px 25px 0 0; padding: 25px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .mine-opt { padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: center; cursor: pointer; font-weight: 700; border: 1px solid transparent; }
-        .mine-opt.active { border-color: var(--primary-blue); background: rgba(59, 130, 246, 0.2); }
-        .footer { padding: 15px 25px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; background: #0b0f1a; letter-spacing: 1px; }
+        .mine-opt { padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: center; font-weight: 700; }
+        .mine-opt.active { border: 1px solid var(--primary-blue); background: rgba(59, 130, 246, 0.2); }
+        .footer { padding: 15px 25px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; background: #0b0f1a; }
+        .disabled { pointer-events: none; opacity: 0.8; }
     </style>
 </head>
 <body>
-
 <div class="game-container">
-    <!-- Top Error Alert -->
     <div id="errorPopup">Low Balance!</div>
-
     <div class="top-nav">
         <div style="display: flex; align-items: center;">
             <a href="lobby.html" class="back-btn">‹</a>
             <div class="user-info">
                 <span class="uid-label">PLAYER ID</span>
-                <span class="uid-value" id="userUid">51629</span>
+                <span class="uid-value" id="userUid">-----</span>
             </div>
         </div>
         <div class="balance-chip">
@@ -220,17 +112,17 @@
     </div>
 
     <div class="game-title">MINES PRO</div>
-
+    
     <div id="winPopup" class="win-popup">
-        <span>YOU WON</span>
+        <span style="font-size: 14px; display: block; opacity: 0.8;">WINNER</span>
         <div id="winVal">₹0.00</div>
     </div>
 
     <div class="grid-container" id="grid"></div>
 
-    <div class="mid-actions">
-        <button class="btn-secondary" onclick="resetGame()">CLEAR BOARD</button>
-        <button class="btn-secondary" id="mineSelectTrigger" onclick="toggleModal()">3 MINES</button>
+    <div style="display: flex; gap: 10px; padding: 0 20px 15px;">
+        <button class="btn-step" style="flex:1; font-size: 12px; background: var(--glass);" onclick="resetGame()">RESET</button>
+        <button class="btn-step" id="mineSelectTrigger" style="flex:1; font-size: 12px; background: var(--glass);" onclick="toggleModal()">3 MINES</button>
     </div>
 
     <div class="betting-panel">
@@ -257,8 +149,8 @@
 
     <div class="footer">
         <span>PROVABLY FAIR</span>
+        <span id="multiplierDisplay" style="color: #fbbf24;">1.00x</span>
         <span id="totalWin" style="color: #4ade80; font-weight: 700;">0.00 INR</span>
-        <span>VERIFY</span>
     </div>
 </div>
 
@@ -270,43 +162,34 @@
         projectId: "admin222-a87bb",
         appId: "1:125393999260:web:cb36cbaa8bfac5cf0be459"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const userPhone = localStorage.getItem('user_phone');
-    
+
     let currentBalance = 0;
     let selectedMines = 3;
     let gameActive = false;
     let revealedCount = 0;
     let currentWinAmount = 0;
-    let currentRoundIndex = 0;
-    let minePositions = []; 
-
+    let minePositions = [];
     const roundPattern = [5, 3, 1, 7, 5, 4, 5, 3, 7, 5, 3, 5, 5, 2, 3, 5, 10, 7, 5, 2];
+    let currentRoundIndex = Math.floor(Math.random() * 20);
 
     if (!userPhone) window.location.href = "index.html";
 
-    // Show Custom Error Function
     function showError(msg) {
-        const errorDiv = document.getElementById('errorPopup');
-        errorDiv.innerText = msg;
-        errorDiv.classList.add('show');
-        setTimeout(() => {
-            errorDiv.classList.remove('show');
-        }, 3000);
+        const p = document.getElementById('errorPopup');
+        p.innerText = msg; p.classList.add('show');
+        setTimeout(() => p.classList.remove('show'), 3000);
     }
 
-    db.ref('users/' + userPhone).on('value', (snapshot) => {
-        const userData = snapshot.val();
-        if (userData) {
-            currentBalance = parseFloat(userData.balance || 0);
+    db.ref('users/' + userPhone).on('value', (snap) => {
+        const data = snap.val();
+        if (data) {
+            currentBalance = parseFloat(data.balance || 0);
             document.getElementById('userBalance').innerText = currentBalance.toFixed(2);
-            document.getElementById('userUid').innerText = userData.uid || "51629";
-            
-            if (currentBalance >= 200 && !gameActive) {
-                window.location.href = "lobby.html";
-            }
+            document.getElementById('userUid').innerText = data.uid || "51629";
+            if (currentBalance >= 200 && !gameActive) window.location.href = "lobby.html";
         }
     });
 
@@ -316,21 +199,17 @@
         for(let i=0; i<25; i++) {
             const item = document.createElement('div');
             item.className = 'grid-item';
-            item.innerHTML = '<div class="dot"></div>';
+            item.innerHTML = '<div style="width:6px;height:6px;background:rgba(255,255,255,0.1);border-radius:50%"></div>';
             item.onclick = () => revealBox(i, item);
             grid.appendChild(item);
         }
     }
 
     function startGame() {
-        const betAmount = parseInt(document.getElementById('betAmount').value);
-        
-        if(currentBalance < betAmount) {
-            showError("Low Balance!"); // Replacing alert
-            return;
-        }
-        
-        db.ref('users/' + userPhone).update({ balance: (currentBalance - betAmount).toFixed(2) });
+        const bet = parseInt(document.getElementById('betAmount').value);
+        if(currentBalance < bet) return showError("Low Balance!");
+
+        db.ref('users/' + userPhone).update({ balance: (currentBalance - bet).toFixed(2) });
         
         minePositions = [];
         while(minePositions.length < selectedMines) {
@@ -338,74 +217,70 @@
             if(!minePositions.includes(r)) minePositions.push(r);
         }
 
-        gameActive = true;
-        revealedCount = 0;
-        currentWinAmount = 0;
+        gameActive = true; revealedCount = 0; currentWinAmount = 0;
         const btn = document.getElementById('mainBetBtn');
-        btn.innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹0.00</span>`;
+        btn.innerHTML = `<span>CASH OUT</span><span style="font-size:12px;opacity:0.8">₹0.00</span>`;
         btn.classList.add('cashout');
         generateGrid();
+        document.getElementById('multiplierDisplay').innerText = "1.00x";
     }
 
-    function revealBox(index, element) {
-        if(!gameActive || element.classList.contains('disabled')) return;
+    function revealBox(idx, el) {
+        if(!gameActive || el.classList.contains('disabled')) return;
         
         let safeLimit = roundPattern[currentRoundIndex];
-        
-        if (revealedCount >= safeLimit) {
-            minePositions[0] = index; 
-            gameOver(false);
-        } else {
-            if(minePositions.includes(index)) {
+        if (revealedCount >= safeLimit || minePositions.includes(idx)) {
+            if (revealedCount < safeLimit && minePositions.includes(idx)) {
+                // Relocate mine if it's supposed to be a "safe" click
                 let newPos;
-                do { newPos = Math.floor(Math.random() * 25); } 
-                while (minePositions.includes(newPos) || index === newPos);
-                minePositions[minePositions.indexOf(index)] = newPos;
+                do { newPos = Math.floor(Math.random() * 25); } while (minePositions.includes(newPos) || idx === newPos);
+                minePositions[minePositions.indexOf(idx)] = newPos;
+                processSafeClick(el);
+            } else {
+                minePositions[0] = idx; // Ensure user hits a mine
+                gameOver(false);
             }
-            element.classList.add('revealed-star');
-            element.innerHTML = '⭐';
-            element.classList.add('disabled');
-            revealedCount++;
-            updateWinDisplay();
+        } else {
+            processSafeClick(el);
         }
     }
 
-    function updateWinDisplay() {
+    function processSafeClick(el) {
+        el.classList.add('revealed-star');
+        el.innerHTML = '⭐';
+        el.classList.add('disabled');
+        revealedCount++;
+        updateWinLogic();
+    }
+
+    function updateWinLogic() {
         const bet = parseInt(document.getElementById('betAmount').value);
         let multiplier = 1;
         for(let i=0; i<revealedCount; i++) {
             multiplier *= (25 - i) / (25 - selectedMines - i);
         }
-        currentWinAmount = parseFloat((bet * multiplier * 0.98).toFixed(2));
-        document.getElementById('totalWin').innerText = currentWinAmount.toFixed(2) + " INR";
-        document.getElementById('mainBetBtn').innerHTML = `<span>CASH OUT</span><span class="btn-sub-text">₹${currentWinAmount.toFixed(2)}</span>`;
+        multiplier = multiplier * 0.98; // House edge
+        currentWinAmount = parseFloat((bet * multiplier).toFixed(2));
         
-        if ((currentBalance + currentWinAmount) >= 200) {
-            setTimeout(cashOut, 300);
-        }
+        document.getElementById('multiplierDisplay').innerText = multiplier.toFixed(2) + "x";
+        document.getElementById('totalWin').innerText = currentWinAmount.toFixed(2) + " INR";
+        document.getElementById('mainBetBtn').innerHTML = `<span>CASH OUT</span><span style="font-size:12px">₹${currentWinAmount.toFixed(2)}</span>`;
+        
+        if ((currentBalance + currentWinAmount) >= 200) cashOut();
     }
 
     function cashOut() {
         if(!gameActive || revealedCount === 0) return;
+        gameActive = false;
         const finalWin = currentWinAmount;
-        const newBalance = (currentBalance + finalWin).toFixed(2);
-        
-        gameActive = false; 
-        
-        db.ref('users/' + userPhone).update({ balance: newBalance }).then(() => {
+        db.ref('users/' + userPhone).update({ balance: (currentBalance + finalWin).toFixed(2) }).then(() => {
             const popup = document.getElementById('winPopup');
             document.getElementById('winVal').innerText = "₹" + finalWin.toFixed(2);
             popup.classList.add('show');
-            
             gameOver(true);
-            
             setTimeout(() => {
                 popup.classList.remove('show');
-                if (parseFloat(newBalance) >= 200) {
-                    window.location.href = "lobby.html";
-                } else {
-                    resetGame();
-                }
+                resetGame();
             }, 2000);
         });
     }
@@ -413,58 +288,49 @@
     function gameOver(won) {
         gameActive = false;
         currentRoundIndex = (currentRoundIndex + 1) % 20;
-        
-        const btn = document.getElementById('mainBetBtn');
-        btn.innerHTML = `<span>PLACE BET</span>`;
-        btn.classList.remove('cashout');
+        document.getElementById('mainBetBtn').innerHTML = `<span>PLACE BET</span>`;
+        document.getElementById('mainBetBtn').classList.remove('cashout');
         
         const items = document.querySelectorAll('.grid-item');
         minePositions.forEach(pos => {
-            const mineItem = items[pos];
-            if (mineItem) {
-                mineItem.innerHTML = '💣';
-                if(!won && mineItem.classList.contains('dot')) {
-                     mineItem.classList.add('revealed-mine');
-                } else {
-                    mineItem.style.background = "rgba(239, 68, 68, 0.5)";
-                    mineItem.style.borderRadius = "12px";
-                }
+            if(items[pos]) {
+                items[pos].innerHTML = '💣';
+                items[pos].classList.add(won ? '' : 'revealed-mine');
+                if(won) items[pos].style.background = "rgba(239, 68, 68, 0.3)";
             }
         });
-        items.forEach(item => item.classList.add('disabled'));
-        if(!won) setTimeout(resetGame, 2500);
+        items.forEach(i => i.classList.add('disabled'));
+        if(!won) setTimeout(resetGame, 2000);
     }
 
     function resetGame() {
         if(gameActive) return;
         document.getElementById('totalWin').innerText = "0.00 INR";
+        document.getElementById('multiplierDisplay').innerText = "1.00x";
         generateGrid();
     }
 
     function toggleModal() { if(!gameActive) { const m = document.getElementById('mineModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; } }
-
+    
     function setMines(count) {
         selectedMines = count;
         document.querySelectorAll('.mine-opt').forEach(opt => {
-            opt.classList.remove('active');
-            if(parseInt(opt.innerText) === count) opt.classList.add('active');
+            opt.classList.toggle('active', parseInt(opt.innerText) === count);
         });
         document.getElementById('mineSelectTrigger').innerText = count + " MINES";
         toggleModal();
         resetGame();
     }
 
-    function adjustBet(amount) {
+    function adjustBet(amt) {
         if(gameActive) return;
-        const input = document.getElementById('betAmount');
-        let newVal = parseInt(input.value) + amount;
-        if(newVal < 10) newVal = 10;
-        input.value = newVal;
+        const i = document.getElementById('betAmount');
+        let val = parseInt(i.value) + amt;
+        i.value = val < 10 ? 10 : val;
     }
 
     function handleBetClick() { if (!gameActive) startGame(); else cashOut(); }
-
     window.onload = generateGrid;
 </script>
 </body>
-    </html>
+</html>
